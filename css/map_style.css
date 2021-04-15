@@ -1,0 +1,112 @@
+/* 全屏显示 */
+html, body, #cesiumContainer{
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+.toolbar_button {
+	width: 32px;
+	height: 32px;
+	margin: 0;
+	padding: 0;
+	position: absolute;
+	background-color: rgba(47, 53, 60, 0.8);
+	color: white;
+	border: none;
+	border-radius: 5px;
+	top: 5px;
+	left: 5px;
+}
+
+.toolbar {
+	display: block;
+	box-sizing: content-box;
+	margin: 0;
+	padding: 0;
+	position: absolute;
+	background-color: rgba(47, 53, 60, 0.8);
+	color: white;
+	border-radius: 5px;
+	top: 42px;
+	left: 5px;
+	overflow: auto;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	transform: translate(0,-20%);
+	visibility: hidden;
+	opacity: 0;
+	transition: visibility 0s .2s,opacity .2s ease-in,transform .2s ease-in;
+}
+
+.toolbar-visible {
+	transform: translate(0,0);
+	visibility: visible;
+	opacity: 1;
+	transition: opacity .2s ease-out,transform .2s ease-out;
+}
+
+.coordination {
+	padding: 4px;
+	position:absolute;
+	bottom:10px;
+	left:10px;
+	z-index:1;
+	font-size:15px;
+	background-color: rgba(47, 53, 60, 0.8);
+	color: white;
+	border-radius: 5px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.coordination_item {
+	margin: 1px 10px 1px 10px;
+	padding: 0;
+	float: left;
+	font-size: 14px;
+	color: white;
+}
+
+.distance-legend {
+	border-radius: 5px;
+	right: 10px;
+	bottom: 10px;
+}
+
+.compass {
+	top: 50px;
+}
+
+.compass-outer-ring {
+	fill: rgba(255, 255, 255, 0.8);
+}
+
+.navigation-controls {
+	top: 150px;
+	border-radius: 5px;
+	background-color: rgba(47, 53, 60, 0.8);
+	border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.navigation-control {
+	margin: 0;
+	padding: 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/*@import url(../templates/bucket.css);*/
+.demo-container {
+	/*background-color: #303336;*/
+	border-radius: 5px;
+	padding: 5px;
+	margin: 5px 3px;
+}
+
+.demo-container input {
+	vertical-align: middle;
+	margin-top: 0;
+}
