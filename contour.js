@@ -1,8 +1,8 @@
 
 //控制高程菜单开关
-function toggleToolbar(){
-		$("#toolbar").toggleClass("toolbar-visible");
-	};
+function toggleToolbar(id){
+		$(id).toggleClass("toolbar-visible")
+	}
 
 $(document).ready(function(){
 
@@ -20,10 +20,8 @@ $(document).ready(function(){
 					},
 				},
 				components: {
-					diffuse:
-							"contourMaterial.alpha == 0.0 ? elevationRampMaterial.diffuse : contourMaterial.diffuse",
-					alpha:
-							"max(contourMaterial.alpha, elevationRampMaterial.alpha)",
+					diffuse: "contourMaterial.alpha == 0.0 ? elevationRampMaterial.diffuse : contourMaterial.diffuse",
+					alpha: "max(contourMaterial.alpha, elevationRampMaterial.alpha)",
 				},
 			},
 			translucent: false,
@@ -133,7 +131,7 @@ $(document).ready(function(){
 	Cesium.knockout.track(viewModel);
 
 	// Bind the viewModel to the DOM elements of the UI that call for it.
-	var toolbar = document.getElementById("toolbar");
+	var toolbar = document.getElementById("toolbar_1");
 	Cesium.knockout.applyBindings(viewModel, toolbar);
 
 	function updateMaterial() {

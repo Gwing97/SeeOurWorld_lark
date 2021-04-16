@@ -306,8 +306,8 @@ MapControl.prototype._init = function () {
 		enableCompass: true,
 		enableZoomControls: true,
 		enableDistanceLegend: true,
-		enableCompassOuterRing: true
-	};
+		enableCompassOuterRing: false
+	}
 	// extend our view by the cesium navigaton mixin
 	me.viewer.extend(Cesium.viewerCesiumNavigationMixin, options);
 
@@ -414,6 +414,107 @@ function dataURLtoBlob(dataurl) {
 		u8arr[n] = bstr.charCodeAt(n);
 	}
 	return new Blob([u8arr], { type: mime });
+}
+
+//定位
+function getLocation(earth)
+{
+	var options = {
+		enableHighAccuracy: true,
+		timeout: 5000,
+		maximumAge: 0
+	};
+
+	function success(pos) {
+		var crd = pos.coords;
+
+		// console.log('Your current position is:')
+		// console.log('Latitude : ' + crd.latitude)
+		// console.log('Longitude: ' + crd.longitude)
+		// console.log('altitude: ' + crd.altitude);
+		// console.log('More or less ' + crd.accuracy + ' meters.')
+
+		if(crd.altitude){
+			var altitude = crd.altitude + 5*crd.accuracy
+		}else{
+			var altitude = 5*crd.accuracy
+		}
+
+		earth.viewer.camera.flyTo({
+			destination: Cesium.Cartesian3.fromDegrees(
+					crd.longitude,
+					crd.latitude,
+					altitude
+				),
+			orientation:{
+				// 指向
+				heading: Cesium.Math.toRadians(earth.opts.orientation.heading),
+				// 视角
+				pitch: Cesium.Math.toRadians(earth.opts.orientation.pitch),
+				roll: Cesium.Math.toRadians(earth.opts.orientation.roll)
+			},
+			complete: drawPoint()
+		});
+
+		function drawPoint() {
+			var helper = new Cesium.EventHelper();
+			helper.add(earth.viewer.scene.globe.tileLoadProgressEvent, function (event) {
+				//console.log("每次加载矢量切片都会进入这个回调")
+				if (event == 0) {
+					//console.log("这个是加载最后一个矢量切片的回调")
+					earth.viewer.entities.remove(earth.viewer.entities.getById('location'))
+					earth.viewer.entities.add({
+						id: 'location',
+						name: '当前位置',
+						position: Cesium.Cartesian3.fromDegrees(
+								crd.longitude,
+								crd.latitude,
+								earth.viewer.scene.globe.getHeight(Cesium.Cartographic.fromDegrees(crd.longitude, crd.latitude))
+							),
+						point: {
+							pixelSize: 10,
+							color: Cesium.Color.BLUE,
+							outlineColor: Cesium.Color.WHITE,
+							outlineWidth: 1,
+							heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+							disableDepthTestDistance: Number.POSITIVE_INFINITY
+						},
+						label: {
+							text: '当前位置',
+							font: '18px sans-serif',
+							fillColor: Cesium.Color.GOLD,
+							style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+							outlineWidth: 2,
+							verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+							pixelOffset: new Cesium.Cartesian2(20, -20),
+							disableDepthTestDistance: Number.POSITIVE_INFINITY
+						}
+					})
+					helper.removeAll()
+				}
+			});
+		}
+	};
+
+	function error(err) {
+		console.warn('ERROR(' + err.code + '): ' + err.message);
+		switch(error.code) {
+			case error.PERMISSION_DENIED:
+				alert("用户拒绝告知地理位置")
+				break;
+			case error.POSITION_UNAVAILABLE:
+				alert("位置信息不可用")
+				break;
+			case error.TIMEOUT:
+				alert("请求用户地理位置超时")
+				break;
+			case error.UNKNOWN_ERROR:
+				alert("未知错误")
+				break;
+		}
+	}
+
+	navigator.geolocation.getCurrentPosition(success, error, options);
 }
 
 //测量空间直线距离

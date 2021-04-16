@@ -8,9 +8,9 @@ and open the template in the editor.
 	<head>
 		<title>看看地球</title>
 		<meta name="Auhthor" content="高万靖"/>
-		<meta name="Description" content="字节跳动实习 地理教研 地图模型库"/>
+		<meta name="Description" content="字节跳动 飞书创新应用开发大赛"/>
 		<meta name="LastUpdate" content="2021/04/15"/>
-		<meta charset="UTF-8"/>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 		<script src="supports/jquery-1.11.0.min.js" type="text/javascript"></script>
 		<script src="supports/Cesium/Cesium.js" type="text/javascript"></script>
@@ -27,8 +27,8 @@ and open the template in the editor.
 	</head>
 	<body>
 		<div id="cesiumContainer"></div>
-		<button class="toolbar_button cesium-button" onclick="toggleToolbar()" title="高程菜单">≡</button>
-		<div id="toolbar" class="toolbar">
+		<button class="toolbar_button cesium-button left_top_first" onclick="toggleToolbar('#toolbar_1')" title="高程菜单">≡</button>
+		<div id="toolbar_1" class="toolbar">
 			<div class="demo-container" style="margin-bottom: 5px">
 				<input type="text" name="search" value="" />
 				<button type="button" id="search" onclick="">搜索</button>
@@ -70,6 +70,9 @@ and open the template in the editor.
 				</div>
 			</div>
 		</div>
+		<button class="toolbar_button left_top_second cesium-button" onclick="getLocation(earth)" title="定位">
+			<span style='font-family:Webdings; font-size:24px; color:white; font-style:normal; font-weight:normal;'>⊙</span>
+		</button>
 		<div class="coordination">
 			<div class="coordination_item">
 				经度：<span id="longitude_show"></span>°
