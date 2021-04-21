@@ -12,6 +12,7 @@ and open the template in the editor.
 		<meta name="Auhthor" content="高万靖"/>
 		<meta name="Description" content="字节跳动 飞书创新应用开发大赛"/>
 		<meta name="LastUpdate" content="2021/04/21"/>
+		<script type="text/javascript" src="https://sf1-scmcdn-tos.pstatp.com/goofy/ee/lark/h5jssdk/lark/js_sdk/h5-js-sdk-1.5.2.js"></script>
 		<script src="supports/jquery-1.11.0.min.js"></script>
 		<script src="supports/Cesium/Cesium.js"></script>
 		<script src="supports/viewerCesiumNavigationMixin.js"></script>
@@ -22,11 +23,16 @@ and open the template in the editor.
 		<script src="map.js"></script>
 		<script src="map_contour.js"></script>
 		<script type="text/javascript">
-
+			if (window.h5sdk) {
+				window.h5sdk.ready(() =>  {
+					//  lark.ready参数为回调函数，在环境准备就绪时触发
+					earth = new MapControl();
+				});
+			} else {
 				$(document).ready(function(){
 					earth = new MapControl();
 				});
-
+			}
 		</script>
 	</head>
 	<body>
