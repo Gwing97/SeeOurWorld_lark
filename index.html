@@ -23,16 +23,16 @@ and open the template in the editor.
 		<script src="map.js"></script>
 		<script src="map_contour.js"></script>
 		<script type="text/javascript">
-			if (window.h5sdk) {
-				window.h5sdk.ready(() =>  {
-					//  lark.ready参数为回调函数，在环境准备就绪时触发
-					earth = new MapControl();
-				});
-			} else {
+			// if (window.h5sdk) {
+			// 	window.h5sdk.ready(() =>  {
+			// 		//  lark.ready参数为回调函数，在环境准备就绪时触发
+			// 		earth = new MapControl();
+			// 	});
+			// } else {
 				$(document).ready(function(){
 					earth = new MapControl();
 				});
-			}
+			// }
 		</script>
 	</head>
 	<body>
