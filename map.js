@@ -490,7 +490,6 @@ MapControl.prototype.flyTo = function (location, text){
 		approx_height = location.altitude + 5*location.accuracy;
 	}
 
-	alert(approx_height);
 	viewer.camera.flyTo({
 		destination: Cesium.Cartesian3.fromDegrees(
 				location.longitude,
@@ -531,8 +530,6 @@ MapControl.prototype.flyTo = function (location, text){
 MapControl.prototype.draw_point = function(location,text) {
 	var me = this;
 	var viewer = me.viewer;
-
-	alert(me.get_altitude(location.longitude,location.latitude));
 
 	viewer.entities.remove(viewer.entities.getById('location'))
 	viewer.entities.add({
