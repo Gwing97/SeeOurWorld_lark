@@ -1,16 +1,22 @@
 
-//var local_ip = "192.168.0.107";	//局域网上的本机IP地址，若发布至互联网后，填写公网ip
-// var local_ip = "www.skylight.xin";
-var local_ip = "localhost";
+function QueryToJSON() {
+	const query = window.location.search.substring(1);
+	var vars = query.split("&");
+	var json = {};
+	for (let i = 0; i < vars.length; i++) {
+		const pair = vars[i].split("=");
+		json[pair[0]] = pair[1];
+	}
+	return json;
+}
 
-// 分辨率调整函数
-
-MapControl = function (opts) {
+var MapControl = function (opts) {
 	var me = this;
 
 	me.opts = $.extend(true, {//opts中的配置会覆盖以下默认配置
-		isGlobal: true,
-		view_center: [100, 35, 10000000],
+		cesium_container: "cesium_container",
+		toolbar_container: "toolbar_1",
+		view_center: [105, 35, 10000000],
 		orientation: {
 			heading: 0,
 			pitch: -90,
@@ -21,12 +27,44 @@ MapControl = function (opts) {
 			max: 8848.0
 		},
 		model: "",
-		showAtmosphere: true
+		is_global: true,
+		show_atmosphere: true,
+		cesium_access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiZDk3MTZiMi1mMzlkLTRkMDEtOTZhMC1hMzhlMTkzMzk1YTAiLCJpZCI6NDUxNTksImlhdCI6MTYxNDc3MjYxOH0.Yps8cIDHNn71LokaYQnF0X199E82fr8Xawua_b4opJs"
 	}, opts);
-	me._init();
+
+	me.amap_api = new amap_api();
+	me.pathpoints = Array();
+	me.default_orientation = {
+		// 指向
+		heading: Cesium.Math.toRadians(me.opts.orientation.heading),
+		// 视角
+		pitch: Cesium.Math.toRadians(me.opts.orientation.pitch),
+		roll: Cesium.Math.toRadians(me.opts.orientation.roll)
+	}
+
+	me.read_query();
+	me.init();
+	me.contour_init();
+	me.search_init();
 };
 
-MapControl.prototype._init = function () {
+MapControl.prototype.read_query = function () {
+	var me = this;
+
+	var query = QueryToJSON();
+
+	if(query["path"]){
+		me.path_polyline = query["path"];
+	}
+
+}
+
+MapControl.prototype.set_query = function () {
+	var me = this;
+
+}
+
+MapControl.prototype.init = function () {
 	var me = this;
 
 	var img_tianditu_rs = new Cesium.ProviderViewModel({
@@ -40,7 +78,7 @@ MapControl.prototype._init = function () {
 			// 服务负载子域
 			var subdomains=['0','1','2','3','4','5','6','7']
 
-			var providers = []
+			var providers = Array()
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
 				url: tdtUrl + 'DataServer?T=img_w&x={x}&y={y}&l={z}&tk=' + token,
@@ -56,9 +94,9 @@ MapControl.prototype._init = function () {
 			}))
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-		        url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + token,
-		        subdomains: subdomains,
-		        tilingScheme : new Cesium.WebMercatorTilingScheme(),
+				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + token,
+				subdomains: subdomains,
+				tilingScheme : new Cesium.WebMercatorTilingScheme(),
 				maximumLevel : 18
 		    }))
 
@@ -151,35 +189,6 @@ MapControl.prototype._init = function () {
 	//	}
 	//});
 
-	//必须跨域才能访问
-	var img_glc2020 = new Cesium.ProviderViewModel({
-		name: "全球30m分辨率土地覆盖_v2020",
-		tooltip: "全球30m分辨率土地覆盖_v2020",
-		iconUrl: "images/globallandcover.png",
-		creationFunction: function () {
-			var provider = new Cesium.WebMapServiceImageryProvider({
-					url: new Cesium.Resource({
-						url: "http://globeland30.org:8088/erdas-apollo/coverage/GlobeLand30_2020"
-					}),
-					layers: "globeland30_2017_antarctica_0,globeland30_2017_0",
-					tileHeight: 256,
-					tileWidth: 256,
-					srs: 'EPSG:4326',
-					parameters: {		//注意带s!!!
-						service: 'WMS',
-						version: '1.1.1',
-						request: 'GetMap',
-						style: 'default,default',
-						transparent: true,
-						TILED: true,
-//						exceptions: 'application/vnd.ogc.se_inimage',
-						format: 'image/png'
-					}
-				})
-			return provider;
-		}
-	});
-
 	var img_WorldSoil = new Cesium.ProviderViewModel({
 		name: "全球土壤类型 2006",
 		tooltip: "全球土壤类型 2006",
@@ -223,9 +232,9 @@ MapControl.prototype._init = function () {
 		}
 	});
 
-	Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiZDk3MTZiMi1mMzlkLTRkMDEtOTZhMC1hMzhlMTkzMzk1YTAiLCJpZCI6NDUxNTksImlhdCI6MTYxNDc3MjYxOH0.Yps8cIDHNn71LokaYQnF0X199E82fr8Xawua_b4opJs";
+	Cesium.Ion.defaultAccessToken = me.opts.cesium_access_token;
 
-	me.viewer = new Cesium.Viewer("cesiumContainer",{
+	me.viewer = new Cesium.Viewer(me.opts.cesium_container,{
 		animation: false,	//是否创建动画小器件，左下角仪表
 		timeline: false,	//是否显示时间线控件
 		geocoder: false,	//是否显示地名查找控件，右上角查询按钮
@@ -239,17 +248,16 @@ MapControl.prototype._init = function () {
 		scene3DOnly: false,//如果设置为true，则所有几何图形以3D模式绘制以节约GPU资源
 		infoBox: false,//是否显示信息框
 		selectionIndicator: false,
-
 //		vrButton: true,//VR模式
 
 		imageryProviderViewModels: [
 			img_google_tianditu_rs,
 			img_google_rs,
 			img_google_topo,
-			img_osm_topo,
 			img_tianditu_rs,
-			img_WorldSoil,
-			img_glc2020],//可供BaseLayerPicker选择的图像图层ProviderViewModel数组
+			img_osm_topo,
+			img_WorldSoil
+		],//可供BaseLayerPicker选择的图像图层ProviderViewModel数组
 		terrainProviderViewModels : [world_terrain, ellipsoid_terrain],
 //		selectedImageryProviderViewModel: img_ALOS_wmts,//当前地形图层的显示模型，仅baseLayerPicker设为true有意义
 //		selectedTerrainProviderViewModel: local_terrain,
@@ -284,11 +292,43 @@ MapControl.prototype._init = function () {
 	me.viewer.scene.fxaa = true
 	me.viewer.scene.postProcessStages.fxaa.enabled = true
 
-	//设置Google遥感影像、全球地形
-	me.viewer.baseLayerPicker.viewModel.selectedImagery= me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[0];
+	//设置天地图为默认的遥感影像
+	me.viewer.baseLayerPicker.viewModel.selectedImagery= me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[3];
 	me.viewer.baseLayerPicker.viewModel.selectedTerrain= me.viewer.baseLayerPicker.viewModel.terrainProviderViewModels[0];
 
-	if(!me.opts.showAtmosphere){
+	//若可以连接上Google，则设置Google影像为默认的遥感影像
+	$.ajax({
+		url: "https://www.google.com/maps/vt?lyrs=s&x=0&y=0&z=0",
+		method: "get",
+		success: function(){
+			// console.log("成功连接至Google服务器");
+			me.viewer.baseLayerPicker.viewModel.selectedImagery= me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[0];
+		},
+		error: function(){
+			// console.log("无法连接至Google服务器");
+		},
+		timeout: 5000
+	})
+
+	//开启光照
+	//me.viewer.scene.globe.enableLighting = true;
+
+	//设置时间，调整太阳高度角
+	//var utc=Cesium.JulianDate.fromDate(new Date("2021/04/15 02:00:00"));//UTC
+	//me.viewer.clockViewModel.currentTime = Cesium.JulianDate.addHours(utc,8,new Cesium.JulianDate());//北京时间=UTC+8=GMT+8
+
+	//调试用选项
+	//me.viewer.extend(Cesium.viewerCesiumInspectorMixin);
+	//显示帧速
+	//me.viewer.scene.debugShowFramesPerSecond = true;
+
+	//添加OSM Building三维建筑数据
+	//me.viewer.scene.primitives.add(Cesium.createOsmBuildings());
+
+	// Enable depth testing so things behind the terrain disappear.
+	me.viewer.scene.globe.depthTestAgainstTerrain = true;
+
+	if(!me.opts.show_atmosphere){
 		me.viewer.scene.skyBox.show = false;	//天空盒，即星空贴图
 		me.viewer.scene.skyAtmosphere.show = false;	//大气效果
 
@@ -344,33 +384,13 @@ MapControl.prototype._init = function () {
 		}
 	});
 
-	//开启光照
-	//me.viewer.scene.globe.enableLighting = true;
-
-	//设置时间，调整太阳高度角
-	//var utc=Cesium.JulianDate.fromDate(new Date("2021/04/15 02:00:00"));//UTC
-	//me.viewer.clockViewModel.currentTime = Cesium.JulianDate.addHours(utc,8,new Cesium.JulianDate());//北京时间=UTC+8=GMT+8
-
-	//调试用选项
-	//me.viewer.extend(Cesium.viewerCesiumInspectorMixin);
-	//显示帧速
-	//me.viewer.scene.debugShowFramesPerSecond = true;
-
-	//添加OSM Building三维建筑数据
-	//me.viewer.scene.primitives.add(Cesium.createOsmBuildings());
-
-	// Enable depth testing so things behind the terrain disappear.
-	me.viewer.scene.globe.depthTestAgainstTerrain = true;
-
 	var longitude_show = document.getElementById('longitude_show');
 	var latitude_show = document.getElementById('latitude_show');
 	var altitude_show = document.getElementById('altitude_show');
 	var view_height = document.getElementById('view_height_show');
 	var canvas = me.viewer.scene.canvas;
-	//具体事件的实现
-	var ellipsoid = me.viewer.scene.globe.ellipsoid;
-	var handler = new Cesium.ScreenSpaceEventHandler(canvas);
-	handler.setInputAction( function(movement){
+
+	function show_coordinate(movement){
 		//捕获椭球体，将笛卡尔二维平面坐标转为椭球体的笛卡尔三维坐标，返回球体表面的点
 		var cartesian = me.viewer.scene.pickPosition(movement.endPosition);
 		if(cartesian){
@@ -387,24 +407,69 @@ MapControl.prototype._init = function () {
 			altitude_show.innerHTML = alti_String;
 			view_height.innerHTML = view_String;
 		}
-	}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+	}
+
+	//具体事件的实现
+	var ellipsoid = me.viewer.scene.globe.ellipsoid;
+	var handler = new Cesium.ScreenSpaceEventHandler(canvas);
+	handler.setInputAction(show_coordinate, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+	handler.setInputAction(show_coordinate, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 };
 
+MapControl.prototype.get_altitude = function(longitude, latitude){
+	var me = this;
+	return me.viewer.scene.globe.getHeight(
+		Cesium.Cartographic.fromDegrees(longitude, latitude)
+	);
+}
+
+MapControl.prototype.select_pathpoint = function(){
+	var me = this;
+
+	var overlay = new Overlay({
+		element: document.getElementById('popup_1')
+	});
+	me.viewer.addOverlay(overlay);
+	// 选择entity的监听器,代码自行调整,可以在overlay的基础上继承写成bubble类
+	var handler = new Cesium.ScreenSpaceEventHandler(me.viewer.scene._imageryLayerCollection);
+
+	handler.setInputAction(function (movement) {
+		var cartesian = me.viewer.scene.pickPosition(movement.position);
+		if(typeof cartesian != "undefined"){
+			let ray = me.viewer.camera.getPickRay(movement.position);
+			cartesian = me.viewer.scene.globe.pick(ray, me.viewer.scene);
+			overlay.setPosition(cartesian);
+		}
+	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+	var popup_closer = document.getElementById('popup-closer_1');
+	popup_closer.onclick = function () {
+		overlay.setPosition(undefined);
+		popup_closer.blur();
+	};
+}
+
+MapControl.prototype.add_pathpoint = function(){
+	var me = this;
+
+
+}
+
 //截图
-function saveToFile(scene) {
+function save_to_file(scene) {
 	let canvas = scene.canvas;
 	let image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
 
 	let link = document.createElement("a");
-	let blob = dataURLtoBlob(image);
+	let blob = data_url_to_blob(image);
 	let objurl = URL.createObjectURL(blob);
 	link.download = "scene.png";
 	link.href = objurl;
 	link.click();
 }
 
-function dataURLtoBlob(dataurl) {
+function data_url_to_blob(dataurl) {
 	let arr = dataurl.split(','),
 		mime = arr[0].match(/:(.*?);/)[1],
 		bstr = atob(arr[1]),
@@ -416,9 +481,93 @@ function dataURLtoBlob(dataurl) {
 	return new Blob([u8arr], { type: mime });
 }
 
+MapControl.prototype.flyTo = function (location, text){
+	var me = this;
+	var viewer = me.viewer
+
+	var approx_height = 12000;
+	if(location.altitude){
+		approx_height = location.altitude + 5*location.accuracy;
+	}
+
+	alert(approx_height);
+	viewer.camera.flyTo({
+		destination: Cesium.Cartesian3.fromDegrees(
+				location.longitude,
+				location.latitude,
+				approx_height
+			),
+		orientation: me.default_orientation,
+		complete: () => {
+			var helper = new Cesium.EventHelper();
+			helper.add(viewer.scene.globe.tileLoadProgressEvent, function (event) {
+				//console.log("每次加载矢量切片都会进入这个回调")
+				if (event == 0) {
+					//console.log("这个是加载最后一个矢量切片的回调")
+					approx_height = me.get_altitude(location.longitude,location.latitude);
+					if(location.altitude){
+						approx_height = location.altitude + 5*location.accuracy;
+					}else if(location.accuracy){
+						approx_height += 5*location.accuracy;
+					}else{
+						approx_height += 2000;
+					}
+					viewer.camera.flyTo({
+						destination: Cesium.Cartesian3.fromDegrees(
+								location.longitude,
+								location.latitude,
+								approx_height
+							),
+						orientation: me.default_orientation
+					});
+					me.draw_point(location,text);
+					helper.removeAll();
+				}
+			});
+		}
+	});
+}
+
+MapControl.prototype.draw_point = function(location,text) {
+	var me = this;
+	var viewer = me.viewer;
+
+	alert(me.get_altitude(location.longitude,location.latitude));
+
+	viewer.entities.remove(viewer.entities.getById('location'))
+	viewer.entities.add({
+		id: 'location',
+		position: Cesium.Cartesian3.fromDegrees(
+				location.longitude,
+				location.latitude,
+				me.get_altitude(location.longitude,location.latitude)
+			),
+		point: {
+			pixelSize: 10,
+			color: Cesium.Color.BLUE,
+			outlineColor: Cesium.Color.WHITE,
+			outlineWidth: 1,
+			heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+			disableDepthTestDistance: Number.POSITIVE_INFINITY
+		},
+		label: {
+			text: text,
+			font: '18px sans-serif',
+			fillColor: Cesium.Color.GOLD,
+			style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+			outlineWidth: 2,
+			verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+			pixelOffset: new Cesium.Cartesian2(20, -20),
+			disableDepthTestDistance: Number.POSITIVE_INFINITY
+		}
+	})
+}
+
 //定位
-function getLocation(earth)
-{
+MapControl.prototype.getLocation = function (){
+	var me = this;
+	var viewer = me.viewer;
+
 	var options = {
 		enableHighAccuracy: true,
 		timeout: 5000,
@@ -427,73 +576,13 @@ function getLocation(earth)
 
 	function success(pos) {
 		var crd = pos.coords;
+		me.flyTo(crd, "当前位置")
 
 		// console.log('Your current position is:')
 		// console.log('Latitude : ' + crd.latitude)
 		// console.log('Longitude: ' + crd.longitude)
 		// console.log('altitude: ' + crd.altitude);
 		// console.log('More or less ' + crd.accuracy + ' meters.')
-
-		if(crd.altitude){
-			var altitude = crd.altitude + 5*crd.accuracy
-		}else{
-			var altitude = 5*crd.accuracy
-		}
-
-		earth.viewer.camera.flyTo({
-			destination: Cesium.Cartesian3.fromDegrees(
-					crd.longitude,
-					crd.latitude,
-					altitude
-				),
-			orientation:{
-				// 指向
-				heading: Cesium.Math.toRadians(earth.opts.orientation.heading),
-				// 视角
-				pitch: Cesium.Math.toRadians(earth.opts.orientation.pitch),
-				roll: Cesium.Math.toRadians(earth.opts.orientation.roll)
-			},
-			complete: drawPoint()
-		});
-
-		function drawPoint() {
-			var helper = new Cesium.EventHelper();
-			helper.add(earth.viewer.scene.globe.tileLoadProgressEvent, function (event) {
-				//console.log("每次加载矢量切片都会进入这个回调")
-				if (event == 0) {
-					//console.log("这个是加载最后一个矢量切片的回调")
-					earth.viewer.entities.remove(earth.viewer.entities.getById('location'))
-					earth.viewer.entities.add({
-						id: 'location',
-						name: '当前位置',
-						position: Cesium.Cartesian3.fromDegrees(
-								crd.longitude,
-								crd.latitude,
-								earth.viewer.scene.globe.getHeight(Cesium.Cartographic.fromDegrees(crd.longitude, crd.latitude))
-							),
-						point: {
-							pixelSize: 10,
-							color: Cesium.Color.BLUE,
-							outlineColor: Cesium.Color.WHITE,
-							outlineWidth: 1,
-							heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-							disableDepthTestDistance: Number.POSITIVE_INFINITY
-						},
-						label: {
-							text: '当前位置',
-							font: '18px sans-serif',
-							fillColor: Cesium.Color.GOLD,
-							style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-							outlineWidth: 2,
-							verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-							pixelOffset: new Cesium.Cartesian2(20, -20),
-							disableDepthTestDistance: Number.POSITIVE_INFINITY
-						}
-					})
-					helper.removeAll()
-				}
-			});
-		}
 	};
 
 	function error(err) {
@@ -512,14 +601,43 @@ function getLocation(earth)
 				alert("未知错误")
 				break;
 		}
-	}
+	};
 
 	navigator.geolocation.getCurrentPosition(success, error, options);
 }
 
+MapControl.prototype.search_init = function () {
+	$("#form_search").bind("submit",() => this.search())
+}
+
+MapControl.prototype.search = function(){
+	var me = this;
+
+	me.amap_api.search($("input#search").val(), (result)=>{
+		if(result.status == "1"){
+			let place_name = result.pois[0].name;
+			let amap_crds = result.pois[0].location.split(',');
+			let crd_trans = new Coordinate();
+			let wgs84_crds = crd_trans.gcj02_to_wgs84(amap_crds[0],amap_crds[1]);
+			me.flyTo({
+				longitude: wgs84_crds[0],
+				latitude: wgs84_crds[1]
+			}, place_name)
+		}
+	});
+}
+
+MapControl.prototype.draw_pathpoints = function() {
+	var me = this;
+
+
+}
+
 //测量空间直线距离
 /******************************************* */
-measureLineSpace = function(viewer) {
+MapControl.prototype.measureLineSpace = function() {
+	var me = this;
+	var viewer = me.viewer;
 
 	// 取消双击事件-追踪该位置
 	viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
@@ -653,8 +771,11 @@ measureLineSpace = function(viewer) {
 }
 
 //****************************测量空间面积************************************************//
-measureAreaSpace = function(viewer) {
-// 取消双击事件-追踪该位置
+MapControl.prototype.measureAreaSpace = function() {
+	var me = this;
+	var viewer = me.viewer;
+
+	// 取消双击事件-追踪该位置
 	viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 	// 鼠标事件
 	handler = new Cesium.ScreenSpaceEventHandler(viewer.scene._imageryLayerCollection);
@@ -844,6 +965,7 @@ measureAreaSpace = function(viewer) {
 	}
 }
 
-function removeEntities(viewer){
-	viewer.entities.removeAll();
+MapControl.prototype.removeEntities = function(){
+	var me = this;
+	me.viewer.entities.removeAll();
 }

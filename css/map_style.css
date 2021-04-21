@@ -1,5 +1,5 @@
 /* 全屏显示 */
-html, body, #cesiumContainer{
+html, body, .cesium_container{
 	height: 100%;
 	width: 100%;
 	margin: 0;
@@ -17,6 +17,18 @@ html, body, #cesiumContainer{
 	position: absolute;
 	top: 65px;
 	left: 42px;
+}
+
+.left_top_third {
+	position: absolute;
+	top: 65px;
+	left: 79px;
+}
+
+.left_top_fourth {
+	position: absolute;
+	top: 65px;
+	left: 116px;
 }
 
 .toolbar_button {
@@ -117,10 +129,22 @@ html, body, #cesiumContainer{
 	/*background-color: #303336;*/
 	border-radius: 5px;
 	padding: 5px;
-	margin: 5px 3px;
+	margin: 5px 3px 5px 3px;
 }
 
 .demo-container input {
 	vertical-align: middle;
 	margin-top: 0;
+}
+
+input.search {
+	border: solid 1px #444;
+	background-color: rgba(255,255,255,.75);
+	display: inline-block;
+	vertical-align: middle;
+	height: 28px;
+	margin: 0;
+	padding: 0 10px 0 10px;
+	box-sizing: border-box;
+	-webkit-appearance: none;
 }

@@ -4,9 +4,31 @@ function toggleToolbar(id){
 		$(id).toggleClass("toolbar-visible")
 	}
 
-$(document).ready(function(){
+MapControl.prototype.contour_init = function() {
+	var me = this;
 
-	function getElevationContourMaterial() {
+	var minHeight = me.opts.altitude_range.min; // approximate dead sea elevation
+	var maxHeight = me.opts.altitude_range.max; // approximate everest elevation
+	var contourColor = Cesium.Color.RED.clone();
+	var contourUniforms = {};
+	var shadingUniforms = {};
+
+	// The viewModel tracks the state of our mini application.
+	viewModel = {
+		enableContour: false,
+		contourSpacing: 100.0,
+		contourWidth: 1.0,
+		selectedShading: "none",
+		changeColor: function () {
+			contourUniforms.color = Cesium.Color.fromRandom(
+					{alpha: 1.0},
+					contourColor
+				);
+		},
+	};
+
+
+	var getElevationContourMaterial = function() {
 		// Creates a composite material with both elevation shading and contour lines
 		return new Cesium.Material({
 			fabric: {
@@ -28,7 +50,7 @@ $(document).ready(function(){
 		});
 	}
 
-	function getSlopeContourMaterial() {
+	var getSlopeContourMaterial = function() {
 		// Creates a composite material with both slope shading and contour lines
 		return new Cesium.Material({
 			fabric: {
@@ -50,7 +72,7 @@ $(document).ready(function(){
 		});
 	}
 
-	function getAspectContourMaterial() {
+	var getAspectContourMaterial = function() {
 		// Creates a composite material with both aspect shading and contour lines
 		return new Cesium.Material({
 			fabric: {
@@ -72,8 +94,7 @@ $(document).ready(function(){
 		});
 	}
 
-
-	function getColorRamp(selectedShading) {
+	var getColorRamp = function(selectedShading) {
 		var elevationRamp = [0.0, 0.045, 0.1, 0.15, 0.37, 0.54, 1.0];
 		var slopeRamp = [0.0, 0.29, 0.5, Math.sqrt(2) / 2, 0.87, 0.91, 1.0];
 		var aspectRamp = [0.0, 0.2, 0.4, 0.6, 0.8, 0.9, 1.0];
@@ -107,37 +128,11 @@ $(document).ready(function(){
 		return ramp;
 	}
 
-	var minHeight = earth.opts.altitude_range.min; // approximate dead sea elevation
-	var maxHeight = earth.opts.altitude_range.max; // approximate everest elevation
-	var contourColor = Cesium.Color.RED.clone();
-	var contourUniforms = {};
-	var shadingUniforms = {};
+	var updateMaterial = function() {
 
-	// The viewModel tracks the state of our mini application.
-	var viewModel = {
-		enableContour: false,
-		contourSpacing: 100.0,
-		contourWidth: 1.0,
-		selectedShading: "none",
-		changeColor: function () {
-			contourUniforms.color = Cesium.Color.fromRandom(
-					{alpha: 1.0},
-					contourColor
-				);
-		},
-	};
-
-	// Convert the viewModel members into knockout observables.
-	Cesium.knockout.track(viewModel);
-
-	// Bind the viewModel to the DOM elements of the UI that call for it.
-	var toolbar = document.getElementById("toolbar_1");
-	Cesium.knockout.applyBindings(viewModel, toolbar);
-
-	function updateMaterial() {
 		var hasContour = viewModel.enableContour;
 		var selectedShading = viewModel.selectedShading;
-		var globe = earth.viewer.scene.globe;
+		var globe = me.viewer.scene.globe;
 		var material;
 		if (hasContour) {
 			if (selectedShading === "elevation") {
@@ -181,6 +176,13 @@ $(document).ready(function(){
 		globe.material = material;
 	}
 
+	// Convert the viewModel members into knockout observables.
+	Cesium.knockout.track(viewModel);
+
+	// Bind the viewModel to the DOM elements of the UI that call for it.
+	var toolbar = document.getElementById(me.opts.toolbar_container);
+	Cesium.knockout.applyBindings(viewModel, toolbar);
+
 	updateMaterial();
 
 	Cesium.knockout
@@ -206,4 +208,4 @@ $(document).ready(function(){
 			.subscribe(function (value) {
 				updateMaterial();
 			});
-});
+}

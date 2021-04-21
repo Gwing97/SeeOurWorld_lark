@@ -6,48 +6,52 @@ and open the template in the editor.
 -->
 <html>
 	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 		<title>看看地球</title>
 		<meta name="Auhthor" content="高万靖"/>
 		<meta name="Description" content="字节跳动 飞书创新应用开发大赛"/>
-		<meta name="LastUpdate" content="2021/04/15"/>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
-		<script src="supports/jquery-1.11.0.min.js" type="text/javascript"></script>
-		<script src="supports/Cesium/Cesium.js" type="text/javascript"></script>
-		<script src="supports/viewerCesiumNavigationMixin.js" type="text/javascript"></script>
+		<meta name="LastUpdate" content="2021/04/21"/>
+		<script src="supports/jquery-1.11.0.min.js"></script>
+		<script src="supports/Cesium/Cesium.js"></script>
+		<script src="supports/viewerCesiumNavigationMixin.js"></script>
 		<link href="supports/Cesium/Widgets/widgets.css" rel="stylesheet" type="text/css"/>
 		<link href="css/map_style.css" rel="stylesheet" type="text/css"/>
-		<script src="map.js" type="text/javascript"></script>
+		<script src="coordinate_transform.js"></script>
+		<script src="amap_api.js"></script>
+		<script src="map.js"></script>
+		<script src="map_contour.js"></script>
 		<script type="text/javascript">
-			$(document).ready(function(){
-				earth = new MapControl();
-			});
+
+				$(document).ready(function(){
+					earth = new MapControl();
+				});
+
 		</script>
-		<script src="contour.js" type="text/javascript"></script>
 	</head>
 	<body>
-		<div id="cesiumContainer"></div>
-		<button class="toolbar_button cesium-button left_top_first" onclick="toggleToolbar('#toolbar_1')" title="高程菜单">≡</button>
+		<div id="cesium_container" class="cesium_container"></div>
+		<button class="toolbar_button cesium-button left_top_first" onclick="toggleToolbar('#toolbar_1')" title="高程菜单">
+			<span style='font-size:24px; color:white; font-style:normal; font-weight:normal;'>≡</span>
+		</button>
 		<div id="toolbar_1" class="toolbar">
-			<div class="demo-container" style="margin-bottom: 5px">
-				<input type="text" name="search" value="" />
-				<button type="button" id="search" onclick="">搜索</button>
+			<div class="demo-container">
+				<form id="form_search" method="get" action="#">
+					<input class="search" type="search" id="search" placeholder="输入地名以搜索位置" />
+					<input class="cesium-button" type="submit" value="搜索"/>
+				</form>
 			</div>
 			<div class="demo-container">
-				<div style="margin-bottom: 5px">
-					<button type="button" id="ps" onclick="saveToFile(earth.viewer.scene)">截图</button>
-					<button type="button" id="distance" onclick="measureLineSpace(earth.viewer)">测距</button>
-					<button type="button" id="area" onclick="measureAreaSpace(earth.viewer)">测面积</button>
-					<button type="button" id="rm" onclick="removeEntities(earth.viewer)">移除测量结果</button>
-				</div>
+				<button type="button" id="ps" onclick="save_to_file(earth.viewer.scene)">截图</button>
+				<!-- <button type="button" id="distance" onclick="earth.measureLineSpace()">测距</button>
+				<button type="button" id="area" onclick="earth.measureAreaSpace()">测面积</button> -->
+				<button type="button" id="rm" onclick="earth.removeEntities()">清除标记</button>
+			</div>
+			<div class="demo-container">
 				<label><input type="radio" name="shadingMaterials" value="none" data-bind="checked: selectedShading">
 					遥感底图</label>
 				<label><input type="radio" name="shadingMaterials" value="elevation" data-bind="checked: selectedShading">
 					高程渲染</label>
-				<label><input type="radio" name="shadingMaterials" value="slope" data-bind="checked: selectedShading">
-					坡度</label>
-				<label><input type="radio" name="shadingMaterials" value="aspect" data-bind="checked: selectedShading">
-					坡向</label>
 			</div>
 			<div class="demo-container">
 				<div>
@@ -55,7 +59,7 @@ and open the template in the editor.
 				</div>
 				<div>
 					等高线间距
-					<input style="width: 136px" type="range" min="1.0" max="500.0" step="10.0" data-bind="value: contourSpacing, valueUpdate: 'input', enable: enableContour">
+					<input style="width: 136px" type="range" min="10.0" max="500.0" step="10.0" data-bind="value: contourSpacing, valueUpdate: 'input', enable: enableContour">
 					<span data-bind="text: contourSpacing"></span>m
 				</div>
 				<div>
@@ -70,8 +74,14 @@ and open the template in the editor.
 				</div>
 			</div>
 		</div>
-		<button class="toolbar_button left_top_second cesium-button" onclick="getLocation(earth)" title="定位">
-			<span style='font-family:Webdings; font-size:24px; color:white; font-style:normal; font-weight:normal;'>⊙</span>
+		<button class="toolbar_button left_top_second cesium-button" onclick="earth.getLocation()" title="定位">
+			<svg t="1618995800639" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2577" width="32" height="32"><path d="M422 427.023a90 90 0 1 0 180 0 90 90 0 1 0-180 0z" p-id="2578" fill="#ffffff"></path><path d="M512 910.402c-19.14 0-37.482-5.854-53.042-16.929-14.063-10.01-24.926-23.596-31.589-39.46L255.043 585.177l-0.154-0.25C225.522 537.209 210 482.605 210 427.021c0-80.667 31.414-156.506 88.454-213.546S431.333 125.021 512 125.021s156.506 31.414 213.546 88.454C782.587 270.515 814 346.354 814 427.021c0 55.849-15.655 110.671-45.274 158.539l-0.264 0.419-172.081 268.716c-6.755 15.726-17.66 29.176-31.704 39.055-15.485 10.895-33.7 16.652-52.677 16.652zM309.246 551.141l175.494 273.78 1.194 3.197c4.149 11.107 14.381 18.284 26.066 18.284 11.584 0 21.791-7.071 26.004-18.015l1.165-3.028L714.43 551.678C737.701 513.983 750 470.884 750 427.021c0-63.572-24.756-123.339-69.709-168.292-44.952-44.951-104.719-69.708-168.291-69.708s-123.339 24.756-168.292 69.708S274 363.449 274 427.021c0 43.64 12.186 86.552 35.246 124.12z" p-id="2579" fill="#ffffff"></path></svg>
+		</button>
+		<button class="toolbar_button cesium-button left_top_third" onclick="" title="地图选点">
+			<span style='font-size:24px; color:white; font-style:normal; font-weight:normal;'>+</span>
+		</button>
+		<button class="toolbar_button cesium-button left_top_fourth" onclick="" title="分享">
+			<svg t="1618995341553" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1148" width="32" height="32"><path d="M763.9552 893.696H231.1168c-43.2128 0-79.2064-37.4272-79.2064-83.5072V285.952c0-46.08 35.84-83.5584 79.2064-83.5584h318.2592a28.8256 28.8256 0 1 1 0 57.6512H231.1168c-11.52 0-21.6064 11.52-21.6064 25.9072V808.96c0 14.3872 10.24 25.9072 21.6064 25.9072h532.8384c11.52 0 21.6064-11.52 21.6064-25.9072v-289.6896a28.8256 28.8256 0 0 1 57.6512 0v290.9184c0 46.08-36.0448 83.5072-79.2576 83.5072z" fill="#ffffff" p-id="1149"></path><path d="M411.136 720.896a28.8768 28.8768 0 0 1-28.8256-28.8256c0-253.44 207.4112-460.8 460.8-460.8a28.8256 28.8256 0 0 1 0 57.6 404.48 404.48 0 0 0-403.3024 403.2512 28.8768 28.8768 0 0 1-28.672 28.7744z" fill="#ffffff" p-id="1150"></path><path d="M742.4 463.104a29.0816 29.0816 0 0 1-24.5248-43.264l86.4256-149.8112-149.76-86.3232a27.3408 27.3408 0 0 1-10.24-38.912 27.392 27.392 0 0 1 38.8608-10.24L857.6 235.52a27.392 27.392 0 0 1 10.24 38.912l-100.8128 174.08a25.6 25.6 0 0 1-24.6272 14.592z" fill="#ffffff" p-id="1151"></path></svg>
 		</button>
 		<div class="coordination">
 			<div class="coordination_item">
