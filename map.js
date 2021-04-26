@@ -775,7 +775,7 @@ MapControl.prototype.route_planning = function() {
 	var crd_trans = new Coordinate();
 
 	me.viewer.entities.removeAll();
-	me.draw_point(me.pathpoints[0], "起点", me.pathpoints[0].id);
+	me.draw_point(me.pathpoints[0], null, me.pathpoints[0].id);
 	for(let i=0; i<me.pathpoints.length-1;i++){
 		let start = crd_trans.wgs84_to_gcj02(
 			me.pathpoints[i].longitude,
@@ -810,7 +810,7 @@ MapControl.prototype.route_planning = function() {
 				alert("路线规划失败")
 			}
 		});
-		me.draw_point(me.pathpoints[i+1], "终点", me.pathpoints[i+1].id);
+		me.draw_point(me.pathpoints[i+1], null, me.pathpoints[i+1].id);
 	}
 }
 
