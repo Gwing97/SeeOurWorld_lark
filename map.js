@@ -32,7 +32,6 @@ var MapControl = function (opts) {
 		cesium_access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiZDk3MTZiMi1mMzlkLTRkMDEtOTZhMC1hMzhlMTkzMzk1YTAiLCJpZCI6NDUxNTksImlhdCI6MTYxNDc3MjYxOH0.Yps8cIDHNn71LokaYQnF0X199E82fr8Xawua_b4opJs"
 	}, opts);
 
-	me.amap_api = new amap_api();
 	me.pathpoints = Array();
 	me.default_orientation = {
 		// 指向
@@ -98,7 +97,7 @@ MapControl.prototype.init = function () {
 				subdomains: subdomains,
 				tilingScheme : new Cesium.WebMercatorTilingScheme(),
 				maximumLevel : 18
-		    }))
+			}))
 
 			return providers;
 		}
@@ -152,6 +151,61 @@ MapControl.prototype.init = function () {
 		}
 	});
 
+	var img_mapbox_rs = new Cesium.ProviderViewModel({
+		name: "MapBox影像底图",
+		tooltip: "MapBox影像底图",
+		iconUrl: "images/mapbox.png",
+		creationFunction: function () {
+			var mapbox_token = 'pk.eyJ1IjoiZ3dpbmc5NyIsImEiOiJja251ZG5uNmswYTZlMnhvend0ejRpZHExIn0.krjMt87hQNfv3NGzyYvhng'
+
+			var provider = new Cesium.UrlTemplateImageryProvider({
+				url: 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token='+mapbox_token
+			});
+			return provider;
+		}
+	});
+
+	var img_mapbox_tianditu_rs = new Cesium.ProviderViewModel({
+		name: "MapBox影像底图-带天地图注记",
+		tooltip: "MapBox影像底图-带天地图注记",
+		iconUrl: "images/mapbox.png",
+		creationFunction: function () {
+			var token = 'c23af70822a130e1822f8464dd6e9fd6'
+			var mapbox_token = 'pk.eyJ1IjoiZ3dpbmc5NyIsImEiOiJja251ZG5uNmswYTZlMnhvend0ejRpZHExIn0.krjMt87hQNfv3NGzyYvhng'
+			// 服务域名
+			var tdtUrl = 'https://t{s}.tianditu.gov.cn/'
+			// 服务负载子域
+			var subdomains_tianditu=['0','1','2','3','4','5','6','7']
+
+			var providers = []
+
+			providers.push(new Cesium.UrlTemplateImageryProvider({
+				url: 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token='+mapbox_token
+			}))
+
+			providers.push(new Cesium.UrlTemplateImageryProvider({
+				url: tdtUrl + 'DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=' + token,
+				subdomains: subdomains_tianditu,
+				tilingScheme : new Cesium.WebMercatorTilingScheme()
+			}))
+
+			// providers.push(new Cesium.UrlTemplateImageryProvider({
+			// 	url: "https://wprd04.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=2&style=8&ltype=11",
+			// 	subdomains: subdomains_tianditu,
+			// 	tilingScheme : new Cesium.WebMercatorTilingScheme()
+			// }))
+
+			providers.push(new Cesium.UrlTemplateImageryProvider({
+				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + token,
+				subdomains: subdomains_tianditu,
+				tilingScheme : new Cesium.WebMercatorTilingScheme(),
+				maximumLevel : 18
+			}))
+
+			return providers;
+		}
+	});
+
 	var img_google_topo = new Cesium.ProviderViewModel({
 		name: "Google地形图",
 		tooltip: "Google地形图",
@@ -167,7 +221,7 @@ MapControl.prototype.init = function () {
 	var img_osm_topo = new Cesium.ProviderViewModel({
 		name: "OpenStreetMap地形图",
 		tooltip: "OpenStreetMap地形图",
-		iconUrl: "images/OpenStreetMap.ico",
+		iconUrl: "images/osm_logo.png",
 		creationFunction: function () {
 			var provider = new Cesium.UrlTemplateImageryProvider({
 					url: "https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38"
@@ -213,12 +267,29 @@ MapControl.prototype.init = function () {
 		}
 	});
 
-	var world_terrain = new Cesium.ProviderViewModel({
-		name: "全球地形",
-		tooltip: "全球地形",
+	var cesium_terrain = new Cesium.ProviderViewModel({
+		name: "Cesium全球地形",
+		tooltip: "Cesium全球地形",
 		iconUrl: "./images/CesiumWorldTerrain.png",
 		creationFunction:  function () {
-			return Cesium.createWorldTerrain()
+			return Cesium.createWorldTerrain({
+				// required for water effects
+				requestWaterMask : true,
+				// required for terrain lighting
+				requestVertexNormals : true
+			});
+		}
+	});
+
+	var google_terrain = new Cesium.ProviderViewModel({
+		name: "Google全球地形",
+		tooltip: "Google全球地形",
+		iconUrl: "./images/GoogleEarth.ico",
+		creationFunction:  function () {
+			var provider = new Cesium.GoogleEarthEnterpriseTerrainProvider({
+				metadata : new Cesium.GoogleEarthEnterpriseMetadata('http://www.earthenterprise.org/3d')
+			});
+			return provider;
 		}
 	});
 
@@ -254,11 +325,13 @@ MapControl.prototype.init = function () {
 			img_google_tianditu_rs,
 			img_google_rs,
 			img_google_topo,
+			img_mapbox_tianditu_rs,
+			img_mapbox_rs,
 			img_tianditu_rs,
 			img_osm_topo,
 			img_WorldSoil
 		],//可供BaseLayerPicker选择的图像图层ProviderViewModel数组
-		terrainProviderViewModels : [world_terrain, ellipsoid_terrain],
+		terrainProviderViewModels : [cesium_terrain, google_terrain, ellipsoid_terrain],
 //		selectedImageryProviderViewModel: img_ALOS_wmts,//当前地形图层的显示模型，仅baseLayerPicker设为true有意义
 //		selectedTerrainProviderViewModel: local_terrain,
 //		terrainProvider: Cesium.createWorldTerrain(),		//cesium自带的世界地形
@@ -384,15 +457,19 @@ MapControl.prototype.init = function () {
 		}
 	});
 
-	var longitude_show = document.getElementById('longitude_show');
-	var latitude_show = document.getElementById('latitude_show');
-	var altitude_show = document.getElementById('altitude_show');
-	var view_height = document.getElementById('view_height_show');
+	var longitude_show = $('#longitude_show').get(0);
+	var latitude_show = $('#latitude_show').get(0);
+	var altitude_show = $('#altitude_show').get(0);
+	var view_height = $('#view_height_show').get(0);
 	var canvas = me.viewer.scene.canvas;
 
-	function show_coordinate(movement){
+	function show_coordinate(movement, type){
 		//捕获椭球体，将笛卡尔二维平面坐标转为椭球体的笛卡尔三维坐标，返回球体表面的点
-		var cartesian = me.viewer.scene.pickPosition(movement.endPosition);
+		if(movement.endPosition){
+			var cartesian = me.viewer.scene.pickPosition(movement.endPosition);
+		}else if(movement.position){
+			var cartesian = me.viewer.scene.pickPosition(movement.position);
+		}
 		if(cartesian){
 			//将笛卡尔三维坐标转为地图坐标（弧度）
 			var cartographic = me.viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
@@ -424,68 +501,57 @@ MapControl.prototype.get_altitude = function(longitude, latitude){
 	);
 }
 
+MapControl.prototype.id = 0;
+MapControl.prototype.get_id = function(){
+	this.id += 1;
+	return this.id;
+}
+
 MapControl.prototype.select_pathpoint = function(){
 	var me = this;
 
-	var overlay = new Overlay({
-		element: document.getElementById('popup_1')
-	});
-	me.viewer.addOverlay(overlay);
 	// 选择entity的监听器,代码自行调整,可以在overlay的基础上继承写成bubble类
 	var handler = new Cesium.ScreenSpaceEventHandler(me.viewer.scene._imageryLayerCollection);
 
 	handler.setInputAction(function (movement) {
+		var overlay = new Overlay({
+			MapControl: me,
+			show_address: true
+		});
+		me.viewer.addOverlay(overlay);
+
 		var cartesian = me.viewer.scene.pickPosition(movement.position);
 		if(typeof cartesian != "undefined"){
 			let ray = me.viewer.camera.getPickRay(movement.position);
 			cartesian = me.viewer.scene.globe.pick(ray, me.viewer.scene);
 			overlay.setPosition(cartesian);
 		}
+		handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-	var popup_closer = document.getElementById('popup-closer_1');
-	popup_closer.onclick = function () {
-		overlay.setPosition(undefined);
-		popup_closer.blur();
-	};
 }
 
-MapControl.prototype.add_pathpoint = function(){
+MapControl.prototype.add_pathpoint = function(location){
 	var me = this;
 
-
+	me.pathpoints.push(location);
+	console.log(me.pathpoints);
 }
 
-//截图
-function save_to_file(scene) {
-	let canvas = scene.canvas;
-	let image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+MapControl.prototype.remove_pathpoint = function(id){
+	var me = this;
 
-	let link = document.createElement("a");
-	let blob = data_url_to_blob(image);
-	let objurl = URL.createObjectURL(blob);
-	link.download = "scene.png";
-	link.href = objurl;
-	link.click();
-}
-
-function data_url_to_blob(dataurl) {
-	let arr = dataurl.split(','),
-		mime = arr[0].match(/:(.*?);/)[1],
-		bstr = atob(arr[1]),
-		n = bstr.length,
-		u8arr = new Uint8Array(n);
-	while (n--) {
-		u8arr[n] = bstr.charCodeAt(n);
+	let i = me.pathpoints.findIndex((point)=>point.id==id);
+	if(i!=-1){
+		me.pathpoints.splice(i,1);
 	}
-	return new Blob([u8arr], { type: mime });
+	console.log(me.pathpoints);
 }
 
-MapControl.prototype.flyTo = function (location, text){
+MapControl.prototype.flyTo = function (location, callback){
 	var me = this;
 	var viewer = me.viewer
 
-	var approx_height = 12000;
+	var approx_height = 9000;
 	if(location.altitude){
 		approx_height = location.altitude + 5*location.accuracy;
 	}
@@ -503,7 +569,7 @@ MapControl.prototype.flyTo = function (location, text){
 				//console.log("每次加载矢量切片都会进入这个回调")
 				if (event == 0) {
 					//console.log("这个是加载最后一个矢量切片的回调")
-					approx_height = me.get_altitude(location.longitude,location.latitude);
+					let approx_height = me.get_altitude(location.longitude,location.latitude);
 					if(location.altitude){
 						approx_height = location.altitude + 5*location.accuracy;
 					}else if(location.accuracy){
@@ -519,7 +585,9 @@ MapControl.prototype.flyTo = function (location, text){
 							),
 						orientation: me.default_orientation
 					});
-					me.draw_point(location,text);
+					if(callback){
+						callback(location);
+					}
 					helper.removeAll();
 				}
 			});
@@ -527,13 +595,26 @@ MapControl.prototype.flyTo = function (location, text){
 	});
 }
 
-MapControl.prototype.draw_point = function(location,text) {
+MapControl.prototype.draw_point = function(location, text=null,  id='location') {
 	var me = this;
 	var viewer = me.viewer;
 
-	viewer.entities.remove(viewer.entities.getById('location'))
+	viewer.entities.remove(viewer.entities.getById(id))
+	var label = null;
+	if(text){
+		label = {
+			text: text,
+			font: '18px sans-serif',
+			fillColor: Cesium.Color.GOLD,
+			style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+			outlineWidth: 2,
+			verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+			pixelOffset: new Cesium.Cartesian2(20, -20),
+			disableDepthTestDistance: Number.POSITIVE_INFINITY
+		}
+	}
 	viewer.entities.add({
-		id: 'location',
+		id: id,
 		position: Cesium.Cartesian3.fromDegrees(
 				location.longitude,
 				location.latitude,
@@ -547,17 +628,43 @@ MapControl.prototype.draw_point = function(location,text) {
 			heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
 			disableDepthTestDistance: Number.POSITIVE_INFINITY
 		},
-		label: {
-			text: text,
-			font: '18px sans-serif',
-			fillColor: Cesium.Color.GOLD,
-			style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-			outlineWidth: 2,
-			verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-			pixelOffset: new Cesium.Cartesian2(20, -20),
-			disableDepthTestDistance: Number.POSITIVE_INFINITY
-		}
+		label: label
 	})
+}
+
+MapControl.prototype.draw_polyline = function(locations) {
+	var me = this;
+
+	var positions = []
+	locations.forEach((loc, i) => {
+		positions.push(Cesium.Cartesian3.fromDegrees(
+			loc.longitude,
+			loc.latitude,
+			me.get_altitude(loc.longitude,loc.latitude)
+		));
+	});
+
+	var line_options = {
+		name: 'route',
+		polyline: {
+			show: true,
+			positions: positions,
+			material: Cesium.Color.CHARTREUSE,
+			width: 5,
+			clampToGround: true
+		}
+	};
+	me.viewer.entities.add(line_options);
+
+	// var helper = new Cesium.EventHelper();
+	// helper.add(viewer.scene.globe.tileLoadProgressEvent, function (event) {
+	// 	//console.log("每次加载矢量切片都会进入这个回调")
+	// 	if (event == 0) {
+	// 		//console.log("这个是加载最后一个矢量切片的回调")
+	// 		line_options.polyline.positions = positions;
+	// 		helper.removeAll();
+	// 	}
+	// });
 }
 
 //定位
@@ -573,7 +680,7 @@ MapControl.prototype.getLocation = function (){
 
 	function success(pos) {
 		var crd = pos.coords;
-		me.flyTo(crd, "当前位置")
+		me.flyTo(crd, (location) => me.draw_point(location, "当前位置"))
 
 		// console.log('Your current position is:')
 		// console.log('Latitude : ' + crd.latitude)
@@ -600,18 +707,41 @@ MapControl.prototype.getLocation = function (){
 		}
 	};
 
-	navigator.geolocation.getCurrentPosition(success, error, options);
+	if (window.h5sdk) {
+		alert("调用定位API")
+		window.h5sdk.device.geolocation.get({
+			useCache: false,
+			onSuccess: function(locationData) {
+				alert(locationData);
+				success(locationData)
+			},
+			onFail: function(errorMsg) {
+				alert(errorMsg && errorMsg.message || "error");
+			}
+		});
+	} else {
+		navigator.geolocation.getCurrentPosition(success, error, options);
+	}
+
 }
 
 MapControl.prototype.search_init = function () {
-	$("#form_search").bind("submit",() => this.search())
+	var me = this;
+	$("#form_search").bind("submit",() => {
+		me.search();
+		return false;		//防止form自动跳转
+	})
+	$('#route_planning').click(()=>{
+		me.route_planning();
+	});
 }
 
 MapControl.prototype.search = function(){
 	var me = this;
-
-	me.amap_api.search($("input#search").val(), (result)=>{
+ 	var amap = new amap_api();
+	amap.search($("input#search").val(), (result)=>{
 		if(result.status == "1"){
+			toggleToolbarById(me.opts.toolbar_container);
 			let place_name = result.pois[0].name;
 			let amap_crds = result.pois[0].location.split(',');
 			let crd_trans = new Coordinate();
@@ -619,15 +749,94 @@ MapControl.prototype.search = function(){
 			me.flyTo({
 				longitude: wgs84_crds[0],
 				latitude: wgs84_crds[1]
-			}, place_name)
+			}, (location) => me.draw_point(location, place_name, "search_place"))
 		}
 	});
 }
 
-MapControl.prototype.draw_pathpoints = function() {
+MapControl.prototype.share = function() {
+	if(window.h5sdk){
+		window.h5sdk.biz.util.share({
+			url: "https://www.skylight.xin?",
+			title: "看看地球",
+			image: "images/mountain.png",
+			content: "可以浏览全球三维地形图，并在飞书文档里分享地点和路线",
+			onSuccess: function(result) {
+			    console.log(result);
+			}
+		});
+	}
+}
+
+MapControl.prototype.route_planning = function() {
 	var me = this;
 
+	var amap = new amap_api();
+	var crd_trans = new Coordinate();
 
+	me.viewer.entities.removeAll();
+	me.draw_point(me.pathpoints[0], "起点", me.pathpoints[0].id);
+	for(let i=0; i<me.pathpoints.length-1;i++){
+		let start = crd_trans.wgs84_to_gcj02(
+			me.pathpoints[i].longitude,
+			me.pathpoints[i].latitude
+		);
+		let end = crd_trans.wgs84_to_gcj02(
+			me.pathpoints[i+1].longitude,
+			me.pathpoints[i+1].latitude
+		);
+		let start_string = start[0].toFixed(6)+','+start[1].toFixed(6);
+		let end_string = end[0].toFixed(6)+','+end[1].toFixed(6);
+		amap.route_planning(start_string, end_string, (result)=>{
+			console.log(result);
+			if(result.status == 1){
+				var locations = [];
+				result.route.paths.forEach((path, i) => {
+					path.steps.forEach((step, i) => {
+						step.polyline.split(';').forEach((point, i) => {
+							let wgs84_crds = crd_trans.gcj02_to_wgs84(
+								parseFloat(point.split(',')[0]),
+								parseFloat(point.split(',')[1])
+							);
+							locations.push({
+								longitude: wgs84_crds[0],
+								latitude: wgs84_crds[1]
+							})
+						})
+					});
+				});
+				me.draw_polyline(locations);
+			}else{
+				alert("路线规划失败")
+			}
+		});
+		me.draw_point(me.pathpoints[i+1], "终点", me.pathpoints[i+1].id);
+	}
+}
+
+//截图
+function save_to_file(scene) {
+	let canvas = scene.canvas;
+	let image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+
+	let link = document.createElement("a");
+	let blob = data_url_to_blob(image);
+	let objurl = URL.createObjectURL(blob);
+	link.download = "scene.png";
+	link.href = objurl;
+	link.click();
+}
+
+function data_url_to_blob(dataurl) {
+	let arr = dataurl.split(','),
+		mime = arr[0].match(/:(.*?);/)[1],
+		bstr = atob(arr[1]),
+		n = bstr.length,
+		u8arr = new Uint8Array(n);
+	while (n--) {
+		u8arr[n] = bstr.charCodeAt(n);
+	}
+	return new Blob([u8arr], { type: mime });
 }
 
 //测量空间直线距离

@@ -1,7 +1,7 @@
 
 //控制高程菜单开关
-function toggleToolbar(id){
-		$(id).toggleClass("toolbar-visible")
+function toggleToolbarById(id){
+		$('#'+id).toggleClass("toolbar-visible")
 	}
 
 MapControl.prototype.contour_init = function() {
