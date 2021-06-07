@@ -1,4 +1,16 @@
 
+function getQueryVariable(variable) {
+	const query = window.location.search.substring(1);
+	const vars = query.split("&");
+	for (let i = 0; i < vars.length; i++) {
+		const pair = vars[i].split("=");
+		if (pair[0] == variable) {
+			return pair[1];
+		}
+	}
+	return '';
+}
+
 function QueryToJSON() {
 	const query = window.location.search.substring(1);
 	var vars = query.split("&");
@@ -17,9 +29,14 @@ var MapControl = function (opts) {
 		cesium_container: "cesium_container",
 		toolbar_container: "toolbar_1",
 		view_center: [105, 35, 10000000],
-		orientation: {
+		home_orientation: {
 			heading: 0,
 			pitch: -90,
+			roll: 0
+		},
+		point_orientation: {
+			heading: 0,
+			pitch: -45,
 			roll: 0
 		},
 		altitude_range: {
@@ -33,12 +50,19 @@ var MapControl = function (opts) {
 	}, opts);
 
 	me.pathpoints = Array();
-	me.default_orientation = {
+	me.home_orientation = {
 		// 指向
-		heading: Cesium.Math.toRadians(me.opts.orientation.heading),
+		heading: Cesium.Math.toRadians(me.opts.home_orientation.heading),
 		// 视角
-		pitch: Cesium.Math.toRadians(me.opts.orientation.pitch),
-		roll: Cesium.Math.toRadians(me.opts.orientation.roll)
+		pitch: Cesium.Math.toRadians(me.opts.home_orientation.pitch),
+		roll: Cesium.Math.toRadians(me.opts.home_orientation.roll)
+	}
+	me.point_orientation = {
+		// 指向
+		heading: Cesium.Math.toRadians(me.opts.point_orientation.heading),
+		// 视角
+		pitch: Cesium.Math.toRadians(me.opts.point_orientation.pitch),
+		roll: Cesium.Math.toRadians(me.opts.point_orientation.roll)
 	}
 
 	me.read_query();
@@ -51,11 +75,9 @@ MapControl.prototype.read_query = function () {
 	var me = this;
 
 	var query = QueryToJSON();
-
-	if(query["path"]){
-		me.path_polyline = query["path"];
+	if (query["data"]) {
+		me.path_polyline = JSON.parse(atob(query["data"]));
 	}
-
 }
 
 MapControl.prototype.set_query = function () {
@@ -66,37 +88,39 @@ MapControl.prototype.set_query = function () {
 MapControl.prototype.init = function () {
 	var me = this;
 
+	var tianditu_token = 'c23af70822a130e1822f8464dd6e9fd6'
+	var mapbox_token = 'pk.eyJ1IjoiZ3dpbmc5NyIsImEiOiJja251ZG5uNmswYTZlMnhvend0ejRpZHExIn0.krjMt87hQNfv3NGzyYvhng'
+	// 服务域名
+	var tdtUrl = 'https://t{s}.tianditu.gov.cn/'
+	// 服务负载子域
+
 	var img_tianditu_rs = new Cesium.ProviderViewModel({
 		name: "天地图",
 		tooltip: "天地图",
 		iconUrl: "images/tianditu.png",
 		creationFunction: function () {
-			var token = 'c23af70822a130e1822f8464dd6e9fd6'
-			// 服务域名
-			var tdtUrl = 'https://t{s}.tianditu.gov.cn/'
-			// 服务负载子域
-			var subdomains=['0','1','2','3','4','5','6','7']
+			var subdomains = ['0', '1', '2', '3', '4', '5', '6', '7']
 
 			var providers = Array()
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: tdtUrl + 'DataServer?T=img_w&x={x}&y={y}&l={z}&tk=' + token,
+				url: tdtUrl + 'DataServer?T=img_w&x={x}&y={y}&l={z}&tk=' + tianditu_token,
 				subdomains: subdomains,
-				tilingScheme : new Cesium.WebMercatorTilingScheme(),
-				maximumLevel : 18
+				tilingScheme: new Cesium.WebMercatorTilingScheme(),
+				maximumLevel: 18
 			}))
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: tdtUrl + 'DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=' + token,
+				url: tdtUrl + 'DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=' + tianditu_token,
 				subdomains: subdomains,
-				tilingScheme : new Cesium.WebMercatorTilingScheme()
+				tilingScheme: new Cesium.WebMercatorTilingScheme()
 			}))
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + token,
+				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + tianditu_token,
 				subdomains: subdomains,
-				tilingScheme : new Cesium.WebMercatorTilingScheme(),
-				maximumLevel : 18
+				tilingScheme: new Cesium.WebMercatorTilingScheme(),
+				maximumLevel: 18
 			}))
 
 			return providers;
@@ -122,11 +146,7 @@ MapControl.prototype.init = function () {
 		tooltip: "Google影像底图-带天地图注记",
 		iconUrl: "images/GoogleEarth.ico",
 		creationFunction: function () {
-			var token = 'c23af70822a130e1822f8464dd6e9fd6'
-			// 服务域名
-			var tdtUrl = 'https://t{s}.tianditu.gov.cn/'
-			// 服务负载子域
-			var subdomains_tianditu=['0','1','2','3','4','5','6','7']
+			var subdomains_tianditu = ['0', '1', '2', '3', '4', '5', '6', '7']
 
 			var providers = []
 
@@ -135,16 +155,16 @@ MapControl.prototype.init = function () {
 			}))
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: tdtUrl + 'DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=' + token,
+				url: tdtUrl + 'DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=' + tianditu_token,
 				subdomains: subdomains_tianditu,
-				tilingScheme : new Cesium.WebMercatorTilingScheme()
+				tilingScheme: new Cesium.WebMercatorTilingScheme()
 			}))
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + token,
+				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + tianditu_token,
 				subdomains: subdomains_tianditu,
-				tilingScheme : new Cesium.WebMercatorTilingScheme(),
-				maximumLevel : 18
+				tilingScheme: new Cesium.WebMercatorTilingScheme(),
+				maximumLevel: 18
 			}))
 
 			return providers;
@@ -156,10 +176,8 @@ MapControl.prototype.init = function () {
 		tooltip: "MapBox影像底图",
 		iconUrl: "images/mapbox.png",
 		creationFunction: function () {
-			var mapbox_token = 'pk.eyJ1IjoiZ3dpbmc5NyIsImEiOiJja251ZG5uNmswYTZlMnhvend0ejRpZHExIn0.krjMt87hQNfv3NGzyYvhng'
-
 			var provider = new Cesium.UrlTemplateImageryProvider({
-				url: 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token='+mapbox_token
+				url: 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=' + mapbox_token
 			});
 			return provider;
 		}
@@ -170,23 +188,18 @@ MapControl.prototype.init = function () {
 		tooltip: "MapBox影像底图-带天地图注记",
 		iconUrl: "images/mapbox.png",
 		creationFunction: function () {
-			var token = 'c23af70822a130e1822f8464dd6e9fd6'
-			var mapbox_token = 'pk.eyJ1IjoiZ3dpbmc5NyIsImEiOiJja251ZG5uNmswYTZlMnhvend0ejRpZHExIn0.krjMt87hQNfv3NGzyYvhng'
-			// 服务域名
-			var tdtUrl = 'https://t{s}.tianditu.gov.cn/'
-			// 服务负载子域
-			var subdomains_tianditu=['0','1','2','3','4','5','6','7']
+			var subdomains_tianditu = ['0', '1', '2', '3', '4', '5', '6', '7']
 
 			var providers = []
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token='+mapbox_token
+				url: 'https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=' + mapbox_token
 			}))
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: tdtUrl + 'DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=' + token,
+				url: tdtUrl + 'DataServer?T=ibo_w&x={x}&y={y}&l={z}&tk=' + tianditu_token,
 				subdomains: subdomains_tianditu,
-				tilingScheme : new Cesium.WebMercatorTilingScheme()
+				tilingScheme: new Cesium.WebMercatorTilingScheme()
 			}))
 
 			// providers.push(new Cesium.UrlTemplateImageryProvider({
@@ -196,10 +209,10 @@ MapControl.prototype.init = function () {
 			// }))
 
 			providers.push(new Cesium.UrlTemplateImageryProvider({
-				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + token,
+				url: tdtUrl + 'DataServer?T=cia_w&x={x}&y={y}&l={z}&tk=' + tianditu_token,
 				subdomains: subdomains_tianditu,
-				tilingScheme : new Cesium.WebMercatorTilingScheme(),
-				maximumLevel : 18
+				tilingScheme: new Cesium.WebMercatorTilingScheme(),
+				maximumLevel: 18
 			}))
 
 			return providers;
@@ -224,10 +237,10 @@ MapControl.prototype.init = function () {
 		iconUrl: "images/osm_logo.png",
 		creationFunction: function () {
 			var provider = new Cesium.UrlTemplateImageryProvider({
-					url: "https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38"
-//					url: "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png"
-//					url: "https://b.tile.opentopomap.org/{z}/{x}/{y}.png"
-				})
+				url: "https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=6170aad10dfd42a38d4d8c709a536f38"
+				//					url: "https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png"
+				//					url: "https://b.tile.opentopomap.org/{z}/{x}/{y}.png"
+			})
 			return provider;
 		}
 	});
@@ -249,20 +262,20 @@ MapControl.prototype.init = function () {
 		iconUrl: "./images/soil.png",
 		creationFunction: function () {
 			var provider = new Cesium.WebMapServiceImageryProvider({
-					url: "https://maps.isric.org/mapserv?map=/map/wrb.map",
-					layers: "MostProbable",
-					tileHeight: 256,
-					tileWidth: 256,
-					parameter: {
-						service: 'WMS',
-						version: '1.3.0',
-						request: 'GetMap',
-						style: 'default',
-						transparent: 'true',
-						format: 'image/png',
-						CRS: 'EPSG:4326'
-					 }
-				})
+				url: "https://maps.isric.org/mapserv?map=/map/wrb.map",
+				layers: "MostProbable",
+				tileHeight: 256,
+				tileWidth: 256,
+				parameter: {
+					service: 'WMS',
+					version: '1.3.0',
+					request: 'GetMap',
+					style: 'default',
+					transparent: 'true',
+					format: 'image/png',
+					CRS: 'EPSG:4326'
+				}
+			})
 			return provider;
 		}
 	});
@@ -271,25 +284,13 @@ MapControl.prototype.init = function () {
 		name: "Cesium全球地形",
 		tooltip: "Cesium全球地形",
 		iconUrl: "./images/CesiumWorldTerrain.png",
-		creationFunction:  function () {
+		creationFunction: function () {
 			return Cesium.createWorldTerrain({
 				// required for water effects
-				requestWaterMask : true,
+				requestWaterMask: true,
 				// required for terrain lighting
-				requestVertexNormals : true
+				requestVertexNormals: true
 			});
-		}
-	});
-
-	var google_terrain = new Cesium.ProviderViewModel({
-		name: "Google全球地形",
-		tooltip: "Google全球地形",
-		iconUrl: "./images/GoogleEarth.ico",
-		creationFunction:  function () {
-			var provider = new Cesium.GoogleEarthEnterpriseTerrainProvider({
-				metadata : new Cesium.GoogleEarthEnterpriseMetadata('http://www.earthenterprise.org/3d')
-			});
-			return provider;
 		}
 	});
 
@@ -297,7 +298,7 @@ MapControl.prototype.init = function () {
 		name: "大地椭球体",
 		tooltip: "大地椭球体",
 		iconUrl: "./images/Ellipsoid.png",
-		creationFunction:  function () {
+		creationFunction: function () {
 			var provider = new Cesium.EllipsoidTerrainProvider();
 			return provider;
 		}
@@ -305,7 +306,7 @@ MapControl.prototype.init = function () {
 
 	Cesium.Ion.defaultAccessToken = me.opts.cesium_access_token;
 
-	me.viewer = new Cesium.Viewer(me.opts.cesium_container,{
+	me.viewer = new Cesium.Viewer(me.opts.cesium_container, {
 		animation: false,	//是否创建动画小器件，左下角仪表
 		timeline: false,	//是否显示时间线控件
 		geocoder: false,	//是否显示地名查找控件，右上角查询按钮
@@ -319,22 +320,22 @@ MapControl.prototype.init = function () {
 		scene3DOnly: false,//如果设置为true，则所有几何图形以3D模式绘制以节约GPU资源
 		infoBox: false,//是否显示信息框
 		selectionIndicator: false,
-//		vrButton: true,//VR模式
+		//		vrButton: true,//VR模式
 
 		imageryProviderViewModels: [
-			img_google_tianditu_rs,
 			img_google_rs,
+			img_google_tianditu_rs,
 			img_google_topo,
-			img_mapbox_tianditu_rs,
 			img_mapbox_rs,
+			img_mapbox_tianditu_rs,
 			img_tianditu_rs,
 			img_osm_topo,
 			img_WorldSoil
 		],//可供BaseLayerPicker选择的图像图层ProviderViewModel数组
-		terrainProviderViewModels : [cesium_terrain, google_terrain, ellipsoid_terrain],
-//		selectedImageryProviderViewModel: img_ALOS_wmts,//当前地形图层的显示模型，仅baseLayerPicker设为true有意义
-//		selectedTerrainProviderViewModel: local_terrain,
-//		terrainProvider: Cesium.createWorldTerrain(),		//cesium自带的世界地形
+		terrainProviderViewModels: [cesium_terrain, ellipsoid_terrain],
+		//		selectedImageryProviderViewModel: img_ALOS_wmts,//当前地形图层的显示模型，仅baseLayerPicker设为true有意义
+		//		selectedTerrainProviderViewModel: local_terrain,
+		//		terrainProvider: Cesium.createWorldTerrain(),		//cesium自带的世界地形
 
 		// 解决截图后图片没有内容，无法得到地图场景的问题
 		contextOptions: {
@@ -365,20 +366,47 @@ MapControl.prototype.init = function () {
 	me.viewer.scene.fxaa = true
 	me.viewer.scene.postProcessStages.fxaa.enabled = true
 
-	//设置天地图为默认的遥感影像
-	me.viewer.baseLayerPicker.viewModel.selectedImagery= me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[3];
-	me.viewer.baseLayerPicker.viewModel.selectedTerrain= me.viewer.baseLayerPicker.viewModel.terrainProviderViewModels[0];
+	//设置MapBox为默认的遥感影像
+	me.viewer.baseLayerPicker.viewModel.selectedImagery = me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[3];
+	me.viewer.baseLayerPicker.viewModel.selectedTerrain = me.viewer.baseLayerPicker.viewModel.terrainProviderViewModels[0];
 
 	//若可以连接上Google，则设置Google影像为默认的遥感影像
 	$.ajax({
 		url: "https://www.google.com/maps/vt?lyrs=s&x=0&y=0&z=0",
 		method: "get",
-		success: function(){
+		success: function () {
 			// console.log("成功连接至Google服务器");
-			me.viewer.baseLayerPicker.viewModel.selectedImagery= me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[0];
+			me.viewer.baseLayerPicker.viewModel.selectedImagery = me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[0];
+			//若可以获取天地图，则添加天地图的标注图层
+			$.ajax({
+				url: 'https://t0.tianditu.gov.cn/DataServer?T=ibo_w&x=0&y=0&l=0&tk=' + tianditu_token,
+				method: "get",
+				success: function () {
+					// console.log("成功获取天地图");
+					me.viewer.baseLayerPicker.viewModel.selectedImagery = me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[1];
+				},
+				error: function () {
+					// console.log("无法获取天地图");
+				},
+				timeout: 5000
+			})
 		},
-		error: function(){
+		error: function () {
 			// console.log("无法连接至Google服务器");
+		},
+		timeout: 5000
+	})
+
+	//若可以获取天地图，则添加天地图的标注图层
+	$.ajax({
+		url: 'https://t0.tianditu.gov.cn/DataServer?T=ibo_w&x=0&y=0&l=0&tk=' + tianditu_token,
+		method: "get",
+		success: function () {
+			// console.log("成功获取天地图");
+			me.viewer.baseLayerPicker.viewModel.selectedImagery = me.viewer.baseLayerPicker.viewModel.imageryProviderViewModels[4];
+		},
+		error: function () {
+			// console.log("无法获取天地图");
 		},
 		timeout: 5000
 	})
@@ -401,7 +429,7 @@ MapControl.prototype.init = function () {
 	// Enable depth testing so things behind the terrain disappear.
 	me.viewer.scene.globe.depthTestAgainstTerrain = true;
 
-	if(!me.opts.show_atmosphere){
+	if (!me.opts.show_atmosphere) {
 		me.viewer.scene.skyBox.show = false;	//天空盒，即星空贴图
 		me.viewer.scene.skyAtmosphere.show = false;	//大气效果
 
@@ -425,19 +453,13 @@ MapControl.prototype.init = function () {
 	me.viewer.extend(Cesium.viewerCesiumNavigationMixin, options);
 
 	// 修改home按钮的行为
-	me.viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function(commandInfo) {
+	me.viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function (commandInfo) {
 		//飞回指定位置
 		me.viewer.camera.flyTo({
 			// Cesium的坐标是以地心为原点，一向指向南美洲，一向指向亚洲，一向指向北极州
 			// fromDegrees()方法，将经纬度和高程转换为世界坐标
-			destination:Cesium.Cartesian3.fromDegrees(...me.opts.view_center),
-			orientation:{
-				// 指向
-				heading: Cesium.Math.toRadians(me.opts.orientation.heading),
-				// 视角
-				pitch: Cesium.Math.toRadians(me.opts.orientation.pitch),
-				roll: Cesium.Math.toRadians(me.opts.orientation.roll)
-			}
+			destination: Cesium.Cartesian3.fromDegrees(...me.opts.view_center),
+			orientation: me.home_orientation
 		});
 		// Tell the home button not to do anything
 		commandInfo.cancel = true;
@@ -447,14 +469,8 @@ MapControl.prototype.init = function () {
 	me.viewer.camera.setView({
 		// Cesium的坐标是以地心为原点，一向指向南美洲，一向指向亚洲，一向指向北极州
 		// fromDegrees()方法，将经纬度和高程转换为世界坐标
-		destination:Cesium.Cartesian3.fromDegrees(...me.opts.view_center),
-		orientation:{
-			// 指向
-			heading: Cesium.Math.toRadians(me.opts.orientation.heading),
-			// 视角
-			pitch: Cesium.Math.toRadians(me.opts.orientation.pitch),
-			roll: Cesium.Math.toRadians(me.opts.orientation.roll)
-		}
+		destination: Cesium.Cartesian3.fromDegrees(...me.opts.view_center),
+		orientation: me.home_orientation
 	});
 
 	var longitude_show = $('#longitude_show').get(0);
@@ -463,21 +479,21 @@ MapControl.prototype.init = function () {
 	var view_height = $('#view_height_show').get(0);
 	var canvas = me.viewer.scene.canvas;
 
-	function show_coordinate(movement, type){
+	function show_coordinate(movement, type) {
 		//捕获椭球体，将笛卡尔二维平面坐标转为椭球体的笛卡尔三维坐标，返回球体表面的点
-		if(movement.endPosition){
+		if (movement.endPosition) {
 			var cartesian = me.viewer.scene.pickPosition(movement.endPosition);
-		}else if(movement.position){
+		} else if (movement.position) {
 			var cartesian = me.viewer.scene.pickPosition(movement.position);
 		}
-		if(cartesian){
+		if (cartesian) {
 			//将笛卡尔三维坐标转为地图坐标（弧度）
 			var cartographic = me.viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
 			//将地图坐标（弧度）转为十进制的度数
-			var log_String = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
-			var lat_String = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+			var log_String = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+			var lat_String = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
 			var alti_String = (me.viewer.scene.globe.getHeight(cartographic)).toFixed(2);
-			var view_String = (me.viewer.camera.positionCartographic.height/1000).toFixed(2);
+			var view_String = (me.viewer.camera.positionCartographic.height / 1000).toFixed(2);
 
 			longitude_show.innerHTML = log_String;
 			latitude_show.innerHTML = lat_String;
@@ -494,7 +510,7 @@ MapControl.prototype.init = function () {
 
 };
 
-MapControl.prototype.get_altitude = function(longitude, latitude){
+MapControl.prototype.get_altitude = function (longitude, latitude) {
 	var me = this;
 	return me.viewer.scene.globe.getHeight(
 		Cesium.Cartographic.fromDegrees(longitude, latitude)
@@ -502,12 +518,12 @@ MapControl.prototype.get_altitude = function(longitude, latitude){
 }
 
 MapControl.prototype.id = 0;
-MapControl.prototype.get_id = function(){
+MapControl.prototype.get_id = function () {
 	this.id += 1;
 	return this.id;
 }
 
-MapControl.prototype.select_pathpoint = function(){
+MapControl.prototype.select_pathpoint = function () {
 	var me = this;
 
 	// 选择entity的监听器,代码自行调整,可以在overlay的基础上继承写成bubble类
@@ -521,7 +537,7 @@ MapControl.prototype.select_pathpoint = function(){
 		me.viewer.addOverlay(overlay);
 
 		var cartesian = me.viewer.scene.pickPosition(movement.position);
-		if(typeof cartesian != "undefined"){
+		if (typeof cartesian != "undefined") {
 			let ray = me.viewer.camera.getPickRay(movement.position);
 			cartesian = me.viewer.scene.globe.pick(ray, me.viewer.scene);
 			overlay.setPosition(cartesian);
@@ -530,62 +546,71 @@ MapControl.prototype.select_pathpoint = function(){
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
 
-MapControl.prototype.add_pathpoint = function(location){
+MapControl.prototype.add_pathpoint = function (location) {
 	var me = this;
 
 	me.pathpoints.push(location);
 	console.log(me.pathpoints);
 }
 
-MapControl.prototype.remove_pathpoint = function(id){
+MapControl.prototype.remove_pathpoint = function (id) {
 	var me = this;
 
-	let i = me.pathpoints.findIndex((point)=>point.id==id);
-	if(i!=-1){
-		me.pathpoints.splice(i,1);
+	let i = me.pathpoints.findIndex((point) => point.id == id);
+	if (i != -1) {
+		me.pathpoints.splice(i, 1);
 	}
 	console.log(me.pathpoints);
 }
 
-MapControl.prototype.flyTo = function (location, callback){
+MapControl.prototype.flyTo = function (location, callback) {
 	var me = this;
 	var viewer = me.viewer
 
-	var approx_height = 9000;
-	if(location.altitude){
-		approx_height = location.altitude + 5*location.accuracy;
+	let approx_height = 12000;
+	if (location.altitude) {
+		approx_height = location.altitude + 5 * location.accuracy;
 	}
-
+	if (callback) {
+		callback(location);
+	}
 	viewer.camera.flyTo({
 		destination: Cesium.Cartesian3.fromDegrees(
-				location.longitude,
-				location.latitude,
-				approx_height
-			),
-		orientation: me.default_orientation,
+			location.longitude,
+			location.latitude,
+			approx_height
+		),
+		orientation: me.home_orientation,
 		complete: () => {
 			var helper = new Cesium.EventHelper();
+			var zoomIn = 10;
 			helper.add(viewer.scene.globe.tileLoadProgressEvent, function (event) {
 				//console.log("每次加载矢量切片都会进入这个回调")
+				if (event < 10) {
+					viewer.camera.zoomIn(zoomIn);
+					zoomIn += 5;
+				}
 				if (event == 0) {
 					//console.log("这个是加载最后一个矢量切片的回调")
-					let approx_height = me.get_altitude(location.longitude,location.latitude);
-					if(location.altitude){
-						approx_height = location.altitude + 5*location.accuracy;
-					}else if(location.accuracy){
-						approx_height += 5*location.accuracy;
-					}else{
-						approx_height += 2000;
+					let approx_height = 0;
+					if (location.altitude) {
+						approx_height = location.altitude;
+					} else {
+						approx_height = me.get_altitude(location.longitude, location.latitude);
+					}
+					let height_above = 4000;
+					if (location.accuracy) {
+						height_above = 5 * location.accuracy;
 					}
 					viewer.camera.flyTo({
 						destination: Cesium.Cartesian3.fromDegrees(
-								location.longitude,
-								location.latitude,
-								approx_height
-							),
-						orientation: me.default_orientation
+							location.longitude - height_above * Math.cos(me.point_orientation.pitch) * Math.sin(me.point_orientation.heading) / 111319.55,
+							location.latitude - height_above * Math.cos(me.point_orientation.pitch) * Math.cos(me.point_orientation.heading) / 111319.55,
+							approx_height + height_above * Math.sin(-me.point_orientation.pitch)
+						),
+						orientation: me.point_orientation
 					});
-					if(callback){
+					if (callback) {
 						callback(location);
 					}
 					helper.removeAll();
@@ -595,13 +620,13 @@ MapControl.prototype.flyTo = function (location, callback){
 	});
 }
 
-MapControl.prototype.draw_point = function(location, text=null,  id='location') {
+MapControl.prototype.draw_point = function (location, text = null, id = 'location') {
 	var me = this;
 	var viewer = me.viewer;
 
 	viewer.entities.remove(viewer.entities.getById(id))
 	var label = null;
-	if(text){
+	if (text) {
 		label = {
 			text: text,
 			font: '18px sans-serif',
@@ -616,10 +641,10 @@ MapControl.prototype.draw_point = function(location, text=null,  id='location') 
 	viewer.entities.add({
 		id: id,
 		position: Cesium.Cartesian3.fromDegrees(
-				location.longitude,
-				location.latitude,
-				me.get_altitude(location.longitude,location.latitude)
-			),
+			location.longitude,
+			location.latitude,
+			me.get_altitude(location.longitude, location.latitude)
+		),
 		point: {
 			pixelSize: 10,
 			color: Cesium.Color.BLUE,
@@ -632,7 +657,7 @@ MapControl.prototype.draw_point = function(location, text=null,  id='location') 
 	})
 }
 
-MapControl.prototype.draw_polyline = function(locations) {
+MapControl.prototype.draw_polyline = function (locations) {
 	var me = this;
 
 	var positions = []
@@ -640,7 +665,7 @@ MapControl.prototype.draw_polyline = function(locations) {
 		positions.push(Cesium.Cartesian3.fromDegrees(
 			loc.longitude,
 			loc.latitude,
-			me.get_altitude(loc.longitude,loc.latitude)
+			me.get_altitude(loc.longitude, loc.latitude)
 		));
 	});
 
@@ -668,7 +693,7 @@ MapControl.prototype.draw_polyline = function(locations) {
 }
 
 //定位
-MapControl.prototype.getLocation = function (){
+MapControl.prototype.getLocation = function () {
 	var me = this;
 	var viewer = me.viewer;
 
@@ -691,7 +716,7 @@ MapControl.prototype.getLocation = function (){
 
 	function error(err) {
 		console.warn('ERROR(' + err.code + '): ' + err.message);
-		switch(error.code) {
+		switch (error.code) {
 			case error.PERMISSION_DENIED:
 				alert("用户拒绝告知地理位置")
 				break;
@@ -711,12 +736,12 @@ MapControl.prototype.getLocation = function (){
 		alert("调用定位API")
 		window.h5sdk.device.geolocation.get({
 			useCache: false,
-			onSuccess: function(locationData) {
-				alert(locationData);
+			onSuccess: function (locationData) {
+				alert(JSON.stringify(locationData));
 				success(locationData)
 			},
-			onFail: function(errorMsg) {
-				alert(errorMsg && errorMsg.message || "error");
+			onFail: function (errorMsg) {
+				alert(JSON.stringify(errorMsg));
 			}
 		});
 	} else {
@@ -727,25 +752,25 @@ MapControl.prototype.getLocation = function (){
 
 MapControl.prototype.search_init = function () {
 	var me = this;
-	$("#form_search").bind("submit",() => {
+	$("#form_search").bind("submit", () => {
 		me.search();
 		return false;		//防止form自动跳转
 	})
-	$('#route_planning').click(()=>{
+	$('#route_planning').click(() => {
 		me.route_planning();
 	});
 }
 
-MapControl.prototype.search = function(){
+MapControl.prototype.search = function () {
 	var me = this;
- 	var amap = new amap_api();
-	amap.search($("input#search").val(), (result)=>{
-		if(result.status == "1"){
+	var amap = new amap_api();
+	amap.search($("input#search").val(), (result) => {
+		if (result.status == "1") {
 			toggleToolbarById(me.opts.toolbar_container);
 			let place_name = result.pois[0].name;
 			let amap_crds = result.pois[0].location.split(',');
 			let crd_trans = new Coordinate();
-			let wgs84_crds = crd_trans.gcj02_to_wgs84(amap_crds[0],amap_crds[1]);
+			let wgs84_crds = crd_trans.gcj02_to_wgs84(amap_crds[0], amap_crds[1]);
 			me.flyTo({
 				longitude: wgs84_crds[0],
 				latitude: wgs84_crds[1]
@@ -754,21 +779,22 @@ MapControl.prototype.search = function(){
 	});
 }
 
-MapControl.prototype.share = function() {
-	if(window.h5sdk){
+MapControl.prototype.share = function () {
+	if (window.h5sdk) {
+		alert("调用分享API")
 		window.h5sdk.biz.util.share({
-			url: "https://www.skylight.xin?",
+			url: "http://www.skylight.xin?data=" + btoa(JSON.stringify(me.pathpoints)),
 			title: "看看地球",
-			image: "images/mountain.png",
+			image: "http://www.skylight.xin/images/mountain.png",
 			content: "可以浏览全球三维地形图，并在飞书文档里分享地点和路线",
-			onSuccess: function(result) {
-			    console.log(result);
+			onSuccess: function (result) {
+				alert(JSON.stringify(result));
 			}
 		});
 	}
 }
 
-MapControl.prototype.route_planning = function() {
+MapControl.prototype.route_planning = function () {
 	var me = this;
 
 	var amap = new amap_api();
@@ -776,20 +802,20 @@ MapControl.prototype.route_planning = function() {
 
 	me.viewer.entities.removeAll();
 	me.draw_point(me.pathpoints[0], null, me.pathpoints[0].id);
-	for(let i=0; i<me.pathpoints.length-1;i++){
+	for (let i = 0; i < me.pathpoints.length - 1; i++) {
 		let start = crd_trans.wgs84_to_gcj02(
 			me.pathpoints[i].longitude,
 			me.pathpoints[i].latitude
 		);
 		let end = crd_trans.wgs84_to_gcj02(
-			me.pathpoints[i+1].longitude,
-			me.pathpoints[i+1].latitude
+			me.pathpoints[i + 1].longitude,
+			me.pathpoints[i + 1].latitude
 		);
-		let start_string = start[0].toFixed(6)+','+start[1].toFixed(6);
-		let end_string = end[0].toFixed(6)+','+end[1].toFixed(6);
-		amap.route_planning(start_string, end_string, (result)=>{
+		let start_string = start[0].toFixed(6) + ',' + start[1].toFixed(6);
+		let end_string = end[0].toFixed(6) + ',' + end[1].toFixed(6);
+		amap.route_planning(start_string, end_string, (result) => {
 			console.log(result);
-			if(result.status == 1){
+			if (result.status == 1) {
 				var locations = [];
 				result.route.paths.forEach((path, i) => {
 					path.steps.forEach((step, i) => {
@@ -806,11 +832,11 @@ MapControl.prototype.route_planning = function() {
 					});
 				});
 				me.draw_polyline(locations);
-			}else{
+			} else {
 				alert("路线规划失败")
 			}
 		});
-		me.draw_point(me.pathpoints[i+1], null, me.pathpoints[i+1].id);
+		me.draw_point(me.pathpoints[i + 1], null, me.pathpoints[i + 1].id);
 	}
 }
 
@@ -841,7 +867,7 @@ function data_url_to_blob(dataurl) {
 
 //测量空间直线距离
 /******************************************* */
-MapControl.prototype.measureLineSpace = function() {
+MapControl.prototype.measureLineSpace = function () {
 	var me = this;
 	var viewer = me.viewer;
 
@@ -857,11 +883,11 @@ MapControl.prototype.measureLineSpace = function() {
 	// tooltip.style.display = "block";
 
 	handler.setInputAction(function (movement) {
-//		 tooltip.style.left = movement.endPosition.x + 3 + "px";
-//		 tooltip.style.top = movement.endPosition.y - 25 + "px";
-//		 tooltip.innerHTML = '<p>单击开始，右击结束</p>';
+		//		 tooltip.style.left = movement.endPosition.x + 3 + "px";
+		//		 tooltip.style.top = movement.endPosition.y - 25 + "px";
+		//		 tooltip.innerHTML = '<p>单击开始，右击结束</p>';
 		cartesian = viewer.scene.pickPosition(movement.endPosition);
-		if(typeof cartesian != "undefined"){
+		if (typeof cartesian != "undefined") {
 			let ray = viewer.camera.getPickRay(movement.endPosition);
 			cartesian = viewer.scene.globe.pick(ray, viewer.scene);
 			//cartesian = viewer.scene.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
@@ -885,7 +911,7 @@ MapControl.prototype.measureLineSpace = function() {
 		// tooltip.style.display = "none";
 		// cartesian = viewer.scene.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
 		cartesian = viewer.scene.pickPosition(movement.position);
-		if(typeof cartesian != "undefined"){
+		if (typeof cartesian != "undefined") {
 			let ray = viewer.camera.getPickRay(movement.position);
 			cartesian = viewer.scene.globe.pick(ray, viewer.scene);
 			if (positions.length == 0) {
@@ -924,7 +950,7 @@ MapControl.prototype.measureLineSpace = function() {
 	handler.setInputAction(function (movement) {
 		handler.destroy(); //关闭事件句柄
 		positions.pop(); //最后一个点无效
-//		viewer.entities.remove(floatingPoint);
+		//		viewer.entities.remove(floatingPoint);
 		// tooltip.style.display = "none";
 	}, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 
@@ -977,7 +1003,7 @@ MapControl.prototype.measureLineSpace = function() {
 }
 
 //****************************测量空间面积************************************************//
-MapControl.prototype.measureAreaSpace = function() {
+MapControl.prototype.measureAreaSpace = function () {
 	var me = this;
 	var viewer = me.viewer;
 
@@ -998,7 +1024,7 @@ MapControl.prototype.measureAreaSpace = function() {
 		// tooltip.style.top = movement.endPosition.y - 25 + "px";
 		// tooltip.innerHTML ='<p>单击开始，右击结束</p>';
 		cartesian = viewer.scene.pickPosition(movement.endPosition);
-		if(typeof cartesian != "undefined"){
+		if (typeof cartesian != "undefined") {
 			let ray = viewer.camera.getPickRay(movement.endPosition);
 			cartesian = viewer.scene.globe.pick(ray, viewer.scene);
 			//cartesian = viewer.scene.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
@@ -1015,10 +1041,10 @@ MapControl.prototype.measureAreaSpace = function() {
 		}
 	}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-	handler.setInputAction( function (movement) {
+	handler.setInputAction(function (movement) {
 		// tooltip.style.display = "none";
 		cartesian = viewer.scene.pickPosition(movement.position);
-		if(typeof cartesian != "undefined"){
+		if (typeof cartesian != "undefined") {
 			let ray = viewer.camera.getPickRay(movement.position);
 			cartesian = viewer.scene.globe.pick(ray, viewer.scene);
 			// cartesian = viewer.scene.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
@@ -1032,7 +1058,7 @@ MapControl.prototype.measureAreaSpace = function() {
 			var longitudeString = Cesium.Math.toDegrees(cartographic.longitude);
 			var latitudeString = Cesium.Math.toDegrees(cartographic.latitude);
 			var heightString = cartographic.height;
-			tempPoints.push({lon: longitudeString, lat: latitudeString, hei: heightString});
+			tempPoints.push({ lon: longitudeString, lat: latitudeString, hei: heightString });
 			floatingPoint = viewer.entities.add({
 				name: '多边形面积',
 				position: positions[positions.length - 1],
@@ -1048,7 +1074,7 @@ MapControl.prototype.measureAreaSpace = function() {
 		}
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-	handler.setInputAction( function (movement) {
+	handler.setInputAction(function (movement) {
 		handler.destroy();
 		positions.pop();
 		//tempPoints.pop();
@@ -1130,7 +1156,7 @@ MapControl.prototype.measureAreaSpace = function() {
 		return angle;
 	}
 
-	var PolygonPrimitive = ( function () {
+	var PolygonPrimitive = (function () {
 		function _(positions) {
 			this.options = {
 				name: '多边形',
@@ -1141,7 +1167,7 @@ MapControl.prototype.measureAreaSpace = function() {
 					// heightReference:20000
 				}
 			};
-			this.hierarchy = {positions};
+			this.hierarchy = { positions };
 			this._init();
 		}
 
@@ -1171,7 +1197,7 @@ MapControl.prototype.measureAreaSpace = function() {
 	}
 }
 
-MapControl.prototype.removeEntities = function(){
+MapControl.prototype.removeEntities = function () {
 	var me = this;
 	me.viewer.entities.removeAll();
 }

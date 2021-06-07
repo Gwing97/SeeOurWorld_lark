@@ -58,7 +58,19 @@ Overlay = function (opts) {
 
 	$("#popup_"+me.id).find(".popup_doc").attr("id","popup_doc_"+me.id);
 	$("#popup_doc_"+me.id).click(()=>{
-
+		if(window.tt){
+			alert('选择云空间文档列表');
+			window.tt.docsPicker({
+			    success: (res)=>{
+			        alert('已选择：');
+					alert(JSON.stringify(res.fileList))
+			    },
+				fail: (error)=>{
+					alert(JSON.stringify(error));
+					// 失败回调
+				}
+			});
+		}
 	})
 
 	$("#popup_"+me.id).find(".popup_locate").attr("id","popup_locate_"+me.id);
@@ -127,8 +139,8 @@ Overlay = function (opts) {
 				}
 			});
 		}
-		$("#popup_coord_"+me.id).html(`经度：${me.location.longitude.toFixed(4)}°</br>
-			纬度：${me.location.latitude.toFixed(4)}°</br>`);
+		$("#popup_coord_"+me.id).html(`经度：${me.location.longitude.toFixed(6)}°</br>
+			纬度：${me.location.latitude.toFixed(6)}°</br>`);
 	};
 	/**
 	 * 设置关联的cesium viewer
